@@ -20,6 +20,7 @@ package icyllis.modernui.mc.text;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import icyllis.modernui.mc.ModernUIMod;
+import icyllis.modernui.mc.MultiBufferSourceCompat;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -1088,8 +1089,8 @@ public class GlyphManagerForge {
         /**
          * Render type for render type buffer system.
          */
-        private TextRenderType renderType;
-        private TextRenderType seeThroughType;
+        private Object renderType;
+        private Object seeThroughType;
 
         // see getAdvance()
         private final float advance;
@@ -1169,7 +1170,7 @@ public class GlyphManagerForge {
 
         public void drawGlyph(Matrix4f matrix, @Nonnull MultiBufferSource buffer, float x, float y, int r, int g,
                               int b, int a, boolean seeThrough, int packedLight) {
-            VertexConsumer builder = buffer.getBuffer(seeThrough ? seeThroughType : renderType);
+            VertexConsumer builder = MultiBufferSourceCompat.getBuffer(buffer, seeThrough ? seeThroughType : renderType);
             x += baselineX;
             y += baselineY;
             /*builder.vertex(matrix, x, y, 0).color(r, g, b, a).uv(u1, v1).uv2(packedLight).endVertex();

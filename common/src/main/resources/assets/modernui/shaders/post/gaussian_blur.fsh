@@ -1,7 +1,7 @@
 // This file is part of Modern UI.
 // Copyright (C) 2024 BloCamLimb.
 // Licensed under LGPL-3.0-or-later.
-#version 150
+#version 330
 
 #moj_import <minecraft:globals.glsl>
 
@@ -17,7 +17,6 @@ layout(std140) uniform BlurInfo {
 };
 
 in vec2 texCoord;
-in vec2 oneTexel;
 
 out vec4 fragColor;
 

@@ -1,0 +1,47 @@
+{
+  "targets": {
+    "swap": {}
+  },
+  "passes": [
+    {
+      "vertex_shader": "minecraft:post/sobel",
+      "fragment_shader": "modernui:post/gaussian_blur",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "minecraft:main"
+        }
+      ],
+      "output": "swap",
+      "uniforms": {
+        "BlurInfo": [
+          {
+            "name": "BlurDir",
+            "type": "vec2",
+            "value": [ 1.0, 0.0 ]
+          }
+        ]
+      }
+    },
+    {
+      "vertex_shader": "minecraft:post/sobel",
+      "fragment_shader": "modernui:post/gaussian_blur",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "swap"
+        }
+      ],
+      "output": "minecraft:main",
+      "uniforms": {
+        "BlurInfo": [
+          {
+            "name": "BlurDir",
+            "type": "vec2",
+            "value": [ 0.0, 1.0 ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -4,10 +4,10 @@ plugins {
 
 repositories {
     maven {
-        url 'https://repo.spongepowered.org/repository/maven-public/'
+        url = 'https://repo.spongepowered.org/repository/maven-public/'
     }
     maven {
-        url 'https://maven.izzel.io/releases/'
+        url = 'https://maven.izzel.io/releases/'
     }
 }
 
@@ -26,5 +26,18 @@ dependencies {
     } else {
         implementation("icyllis.modernui:ModernUI-Core:${core_version}")
         implementation("icyllis.modernui:ModernUI-Markflow:${core_version}")
+    }
+}
+
+def useLegacySources = (minecraft_version as String) == '1.21.8'
+
+sourceSets {
+    main {
+        java {
+            setSrcDirs([useLegacySources ? 'src/legacy/java' : 'src/main/java'])
+        }
+        resources {
+            setSrcDirs([useLegacySources ? 'src/legacy/resources' : 'src/main/resources'])
+        }
     }
 }

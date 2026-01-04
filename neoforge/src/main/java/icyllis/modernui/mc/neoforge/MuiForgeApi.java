@@ -32,18 +32,17 @@ import net.minecraft.client.gui.render.state.GuiElementRenderState;
 import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Rarity;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.function.Supplier;
 
 public final class MuiForgeApi extends MuiModApi {
 
@@ -92,8 +91,8 @@ public final class MuiForgeApi extends MuiModApi {
     }
 
     @Override
-    public void loadEffect(GameRenderer gr, ResourceLocation effect) {
-        gr.setPostEffect(effect);
+    public void loadEffect(GameRenderer gr, Object effect) {
+        GameRendererCompat.setPostEffect(gr, effect);
     }
 
     /*@Override
@@ -105,12 +104,18 @@ public final class MuiForgeApi extends MuiModApi {
 
     @Override
     public boolean isKeyBindingMatches(KeyMapping keyMapping, InputConstants.Key key) {
-        return keyMapping.isActiveAndMatches(key);
+        int keyCode = key.getType() == InputConstants.Type.KEYSYM
+                ? key.getValue()
+                : InputConstants.UNKNOWN.getValue();
+        int scanCode = key.getType() == InputConstants.Type.SCANCODE
+                ? key.getValue()
+                : InputConstants.UNKNOWN.getValue();
+        return keyMapping.matches(new KeyEvent(keyCode, scanCode, /*modifiers*/ 0));
     }
 
     @Override
     public Style applyRarityTo(Rarity rarity, Style baseStyle) {
-        return rarity.getStyleModifier().apply(baseStyle);
+        return baseStyle.withColor(rarity.color());
     }
 
     @Override
@@ -157,21 +162,21 @@ public final class MuiForgeApi extends MuiModApi {
     }
 
     @Override
-    public RenderType createRenderType(String name, int bufferSize,
-                                       boolean affectsCrumbling, boolean sortOnUpload,
-                                       RenderPipeline renderPipeline,
-                                       @Nullable RenderStateShard textureState,
-                                       boolean lightmap) {
-        var builder = RenderType.CompositeState.builder();
-        if (textureState != null) {
-            builder.setTextureState((RenderStateShard.EmptyTextureStateShard) textureState);
-        }
-        if (lightmap) {
-            builder.setLightmapState(RenderStateShard.LIGHTMAP);
-        }
-        return RenderType.create(
-                name, bufferSize, affectsCrumbling, sortOnUpload, renderPipeline,
-                builder.createCompositeState(false)
+    public <RT> RT createRenderType(String name, int bufferSize,
+                                   boolean affectsCrumbling, boolean sortOnUpload,
+                                   RenderPipeline renderPipeline,
+                                   @Nullable Object texture,
+                                   @Nullable Supplier<?> sampler,
+                                   boolean lightmap) {
+        return RenderTypeCompat.create(
+                name,
+                bufferSize,
+                affectsCrumbling,
+                sortOnUpload,
+                renderPipeline,
+                texture,
+                sampler,
+                lightmap
         );
     }
 }

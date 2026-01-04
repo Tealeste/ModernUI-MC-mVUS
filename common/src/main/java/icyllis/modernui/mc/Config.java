@@ -420,8 +420,8 @@ public final class Config {
                         if (window.isFullscreen()) {
                             window.toggleFullScreen();
                         }
-                        GLFW.glfwRestoreWindow(window.getWindow());
-                        GLFW.glfwSetWindowAttrib(window.getWindow(),
+                        GLFW.glfwRestoreWindow(window.handle());
+                        GLFW.glfwSetWindowAttrib(window.handle(),
                                 GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
                         Monitor monitor = window.findBestMonitor();
                         if (monitor != null) {
@@ -430,45 +430,45 @@ public final class Config {
                             int y = monitor.getY();
                             int width = videoMode.getWidth();
                             int height = videoMode.getHeight();
-                            GLFW.glfwSetWindowMonitor(window.getWindow(), MemoryUtil.NULL,
+                            GLFW.glfwSetWindowMonitor(window.handle(), MemoryUtil.NULL,
                                     x, y, width, height, GLFW.GLFW_DONT_CARE);
                         } else {
-                            GLFW.glfwMaximizeWindow(window.getWindow());
+                            GLFW.glfwMaximizeWindow(window.handle());
                         }
                     }
                     case MAXIMIZED -> {
                         if (window.isFullscreen()) {
                             window.toggleFullScreen();
                         }
-                        GLFW.glfwRestoreWindow(window.getWindow());
-                        GLFW.glfwSetWindowAttrib(window.getWindow(),
+                        GLFW.glfwRestoreWindow(window.handle());
+                        GLFW.glfwSetWindowAttrib(window.handle(),
                                 GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
-                        GLFW.glfwMaximizeWindow(window.getWindow());
+                        GLFW.glfwMaximizeWindow(window.handle());
                     }
                     case MAXIMIZED_BORDERLESS -> {
                         if (window.isFullscreen()) {
                             window.toggleFullScreen();
                         }
-                        GLFW.glfwRestoreWindow(window.getWindow());
-                        GLFW.glfwSetWindowAttrib(window.getWindow(),
+                        GLFW.glfwRestoreWindow(window.handle());
+                        GLFW.glfwSetWindowAttrib(window.handle(),
                                 GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
-                        GLFW.glfwMaximizeWindow(window.getWindow());
+                        GLFW.glfwMaximizeWindow(window.handle());
                     }
                     case WINDOWED -> {
                         if (window.isFullscreen()) {
                             window.toggleFullScreen();
                         }
-                        GLFW.glfwSetWindowAttrib(window.getWindow(),
+                        GLFW.glfwSetWindowAttrib(window.handle(),
                                 GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
-                        GLFW.glfwRestoreWindow(window.getWindow());
+                        GLFW.glfwRestoreWindow(window.handle());
                     }
                     case WINDOWED_BORDERLESS -> {
                         if (window.isFullscreen()) {
                             window.toggleFullScreen();
                         }
-                        GLFW.glfwSetWindowAttrib(window.getWindow(),
+                        GLFW.glfwSetWindowAttrib(window.handle(),
                                 GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
-                        GLFW.glfwRestoreWindow(window.getWindow());
+                        GLFW.glfwRestoreWindow(window.handle());
                     }
                 }
             }

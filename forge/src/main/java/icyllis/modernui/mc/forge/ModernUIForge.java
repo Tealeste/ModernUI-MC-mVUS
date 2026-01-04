@@ -32,8 +32,11 @@ import net.minecraftforge.fml.*;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.registries.RegisterEvent;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -82,6 +85,8 @@ public final class ModernUIForge extends ModernUIMod {
         context.registerConfig(ModConfig.Type.COMMON, ConfigImpl.COMMON_SPEC,
                 ModernUI.NAME_CPT + "/common.toml");
         BusGroup modBusGroup = context.getModBusGroup();
+        RegisterEvent.getBus(modBusGroup).addListener(Registration::register);
+        FMLCommonSetupEvent.getBus(modBusGroup).addListener(Registration::setupCommon);
         ModConfigEvent.Loading.getBus(modBusGroup).addListener(
                 event -> ConfigImpl.reloadCommon(event.getConfig())
         );
@@ -158,6 +163,7 @@ public final class ModernUIForge extends ModernUIMod {
                 LOGGER.info(MARKER, "Initialized Modern UI text engine");
             }
             BusGroup modBusGroup = context.getModBusGroup();
+            FMLClientSetupEvent.getBus(modBusGroup).addListener(Registration.ModClient::setupClient);
             ModConfigEvent.Loading.getBus(modBusGroup).addListener(
                     event -> ConfigImpl.reloadAnyClient(event.getConfig())
             );

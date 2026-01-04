@@ -27,12 +27,7 @@ import icyllis.modernui.annotation.MainThread;
 import icyllis.modernui.annotation.RenderThread;
 import icyllis.modernui.core.Core;
 import icyllis.modernui.fragment.Fragment;
-import icyllis.modernui.mc.ModernUIMod;
-import icyllis.modernui.mc.MuiModApi;
-import icyllis.modernui.mc.MuiScreen;
-import icyllis.modernui.mc.ScreenCallback;
-import icyllis.modernui.mc.UIManager;
-import icyllis.modernui.mc.mixin.AccessGameRenderer;
+import icyllis.modernui.mc.*;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -40,12 +35,10 @@ import net.minecraft.client.gui.render.state.GuiElementRenderState;
 import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -58,6 +51,7 @@ import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Public APIs for Minecraft Forge mods to Modern UI.
@@ -171,9 +165,8 @@ public final class MuiForgeApi extends MuiModApi {
     }
 
     @Override
-    public void loadEffect(GameRenderer gr, ResourceLocation effect) {
-        // this method is no longer public in Forge patches...
-        ((AccessGameRenderer) gr).invokeSetPostEffect(effect);
+    public void loadEffect(GameRenderer gr, Object effect) {
+        GameRendererCompat.setPostEffect(gr, effect);
     }
 
     /*@Override
@@ -185,7 +178,13 @@ public final class MuiForgeApi extends MuiModApi {
 
     @Override
     public boolean isKeyBindingMatches(KeyMapping keyMapping, InputConstants.Key key) {
-        return keyMapping.isActiveAndMatches(key);
+        int keyCode = key.getType() == InputConstants.Type.KEYSYM
+                ? key.getValue()
+                : InputConstants.UNKNOWN.getValue();
+        int scanCode = key.getType() == InputConstants.Type.SCANCODE
+                ? key.getValue()
+                : InputConstants.UNKNOWN.getValue();
+        return keyMapping.matches(new KeyEvent(keyCode, scanCode, /*modifiers*/ 0));
     }
 
     @Override
@@ -224,21 +223,21 @@ public final class MuiForgeApi extends MuiModApi {
     }
 
     @Override
-    public RenderType createRenderType(String name, int bufferSize,
-                                       boolean affectsCrumbling, boolean sortOnUpload,
-                                       RenderPipeline renderPipeline,
-                                       @Nullable RenderStateShard textureState,
-                                       boolean lightmap) {
-        var builder = RenderType.CompositeState.builder();
-        if (textureState != null) {
-            builder.setTextureState((RenderStateShard.EmptyTextureStateShard) textureState);
-        }
-        if (lightmap) {
-            builder.setLightmapState(RenderStateShard.LIGHTMAP);
-        }
-        return RenderType.create(
-                name, bufferSize, affectsCrumbling, sortOnUpload, renderPipeline,
-                builder.createCompositeState(false)
+    public <RT> RT createRenderType(String name, int bufferSize,
+                                   boolean affectsCrumbling, boolean sortOnUpload,
+                                   RenderPipeline renderPipeline,
+                                   @Nullable Object texture,
+                                   @Nullable Supplier<?> sampler,
+                                   boolean lightmap) {
+        return RenderTypeCompat.create(
+                name,
+                bufferSize,
+                affectsCrumbling,
+                sortOnUpload,
+                renderPipeline,
+                texture,
+                sampler,
+                lightmap
         );
     }
 

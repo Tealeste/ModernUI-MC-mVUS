@@ -1,17 +1,40 @@
 import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
-    id 'dev.architectury.loom' version '1.11-SNAPSHOT'
+    id 'dev.architectury.loom' version '1.13.467'
     //id 'com.matthewprenger.cursegradle' version '1.4.0'
     id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
-version = "${minecraft_version}-${mod_version}" as String
+version = mod_version as String
+
+def mcPatch = (minecraft_version as String).tokenize('.').last() as int
+def useLegacySources = mcPatch == 8
+def useIdentifierResourceId = mcPatch >= 11
+
+sourceSets {
+    main {
+        java {
+            if (useLegacySources) {
+                setSrcDirs(['src/legacy/java'])
+            } else {
+                setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
+            }
+        }
+        resources {
+            setSrcDirs([useLegacySources ? 'src/legacy/resources' : 'src/main/resources'])
+        }
+    }
+}
 
 configurations {
     shadow
     /*library
     implementation.extendsFrom(library)*/
+}
+
+configurations.configureEach {
+    exclude group: 'net.minecrell', module: 'terminalconsoleappender'
 }
 
 loom {
@@ -31,22 +54,139 @@ loom {
     addTaskBeforeRun(":${name}:classes")
 }
 
+def patchForgeClientExtraJar = {
+    def userHome = gradle.gradleUserHomeDir
+    def forgeUserdev = "${minecraft_version}-${rootProject.modernUiMcProfile.forge}" as String
+    def clientExtraJar = new File(userHome, "caches/fabric-loom/${minecraft_version}/forge/${forgeUserdev}/client-extra.jar")
+
+    if (!clientExtraJar.exists()) {
+        return
+    }
+
+    def zip = new java.util.zip.ZipFile(clientExtraJar)
+    try {
+        if (zip.getEntry('META-INF/MANIFEST.MF') != null) {
+            return
+        }
+    } finally {
+        zip.close()
+    }
+
+    def manifest = new java.util.jar.Manifest()
+    manifest.mainAttributes.putValue('Manifest-Version', '1.0')
+
+    def tempJar = new File(clientExtraJar.parentFile, "${clientExtraJar.name}.patched")
+    tempJar.delete()
+
+    def inZip = new java.util.zip.ZipFile(clientExtraJar)
+    try {
+        tempJar.withOutputStream { outStream ->
+            def jarOut = new java.util.jar.JarOutputStream(outStream)
+            try {
+                def metaInfDir = new java.util.jar.JarEntry('META-INF/')
+                jarOut.putNextEntry(metaInfDir)
+                jarOut.closeEntry()
+
+                def manifestEntry = new java.util.jar.JarEntry('META-INF/MANIFEST.MF')
+                jarOut.putNextEntry(manifestEntry)
+                manifest.write(jarOut)
+                jarOut.closeEntry()
+
+                def buffer = new byte[8192]
+                def entries = inZip.entries()
+                while (entries.hasMoreElements()) {
+                    def entry = entries.nextElement()
+                    if (entry.name == 'META-INF/' || entry.name == 'META-INF/MANIFEST.MF') {
+                        continue
+                    }
+
+                    def outEntry = new java.util.jar.JarEntry(entry.name)
+                    jarOut.putNextEntry(outEntry)
+                    def input = inZip.getInputStream(entry)
+                    try {
+                        int read
+                        while ((read = input.read(buffer)) > 0) {
+                            jarOut.write(buffer, 0, read)
+                        }
+                    } finally {
+                        input.close()
+                    }
+                    jarOut.closeEntry()
+                }
+            } finally {
+                jarOut.close()
+            }
+        }
+    } finally {
+        inZip.close()
+    }
+
+    if (!clientExtraJar.delete()) {
+        throw new GradleException("Failed to delete ${clientExtraJar} before replacing it")
+    }
+    if (!tempJar.renameTo(clientExtraJar)) {
+        throw new GradleException("Failed to replace ${clientExtraJar} with patched jar")
+    }
+}
+
+def patchLoomLaunchCfg = { File launchCfg ->
+    if (!launchCfg.exists()) {
+        return
+    }
+
+    def lines = launchCfg.readLines('UTF-8')
+    def out = []
+    boolean skipping = false
+
+    for (def line : lines) {
+        if (!skipping) {
+            if (!line.startsWith('\t') && line.trim() == 'clientdataArgs') {
+                skipping = true
+                continue
+            }
+            out << line
+            continue
+        }
+
+        if (!line.startsWith('\t')) {
+            skipping = false
+            out << line
+        }
+    }
+
+    launchCfg.text = out.join(System.lineSeparator()) + System.lineSeparator()
+}
+
+tasks.named('generateDLIConfig').configure {
+    doLast {
+        patchForgeClientExtraJar()
+        patchLoomLaunchCfg(file('.gradle/loom-cache/launch.cfg'))
+    }
+}
+
+tasks.named('runClient').configure {
+    doFirst {
+        patchForgeClientExtraJar()
+        patchLoomLaunchCfg(file('.gradle/loom-cache/launch.cfg'))
+    }
+}
+
 repositories {
     maven {
-        name "Jared's maven"
-        url "https://maven.blamejared.com/"
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
         content {
             includeGroup 'mezz.jei'
         }
     }
     maven {
-        url 'https://maven.parchmentmc.org/'
+        url = 'https://maven.parchmentmc.org/'
         content {
             includeGroup 'org.parchmentmc.data'
         }
     }
     maven {
-        url 'https://maven.izzel.io/releases/'
+        url = 'https://maven.izzel.io/releases/'
     }
     mavenCentral()
     flatDir {
@@ -61,12 +201,14 @@ dependencies {
         officialMojangMappings()
         parchment("org.parchmentmc.data:parchment-1.19.3:2023.03.12@zip" as String)
     }*/
-    forge "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    forge("net.minecraftforge:forge:${minecraft_version}-${rootProject.modernUiMcProfile.forge}") {
+        exclude group: 'net.minecrell', module: 'terminalconsoleappender'
+    }
 
     /*modCompileOnlyApi "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
     modCompileOnlyApi "mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"*/
 
-    implementation project(':common')
+    compileOnly project(':common')
 
     if (rootProject.file('../ModernUI').exists()) {
         implementation(forgeRuntimeLibrary("icyllis.arc3d:Arc3D"))
@@ -219,8 +361,7 @@ jar {
                 "Specification-Version"   : "2",
                 "Implementation-Title"    : project.name,
                 "Implementation-Version"  : project.version,
-                "Implementation-Vendor"   : "BloCamLimb",
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+                "Implementation-Vendor"   : "BloCamLimb"
         )
     }
 }
@@ -233,7 +374,7 @@ publishing {
             }
             artifact(sourcesJar.archiveFile) {
                 builtBy build
-                classifier 'sources'
+                classifier = 'sources'
             }
             artifactId = project.name
             groupId = project.group

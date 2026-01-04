@@ -8,7 +8,6 @@
   "client": [
     "AccessBufferSource",
     "AccessFontManager",
-    "AccessGpuTexture",
     "AccessGuiRendererDraw",
     "MixinBidiReorder",
     "MixinClientLanguage",

@@ -77,13 +77,17 @@ final class Registration {
     }
 
     static void registerMenus(@Nonnull RegisterEvent.RegisterHelper<MenuType<?>> helper) {
-        helper.register(MuiRegistries.TEST_MENU_KEY, IMenuTypeExtension.create(TestContainerMenu::new));
+        helper.register(
+                ResourceKey.create(Registries.MENU, MuiRegistries.testMenuKey()),
+                IMenuTypeExtension.create(TestContainerMenu::new)
+        );
     }
 
     static void registerItems(@Nonnull RegisterEvent.RegisterHelper<Item> helper) {
         Item.Properties properties = new Item.Properties().stacksTo(1);
-        properties.setId(ResourceKey.create(Registries.ITEM, MuiRegistries.PROJECT_BUILDER_ITEM_KEY));
-        helper.register(MuiRegistries.PROJECT_BUILDER_ITEM_KEY, new ProjectBuilderItem(properties));
+        ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, MuiRegistries.projectBuilderItemKey());
+        properties.setId(key);
+        helper.register(key, new ProjectBuilderItem(properties));
     }
 
     @SubscribeEvent
@@ -151,7 +155,7 @@ final class Registration {
     static class ModClient {
 
         static {
-            assert (FMLEnvironment.dist.isClient());
+            assert (FMLEnvironment.getDist().isClient());
         }
 
         private ModClient() {

@@ -67,13 +67,11 @@ import static icyllis.modernui.mc.ModernUIMod.*;
 /**
  * This class handles mod loading events, all registry entries are only available under the development mode.
  */
-@Mod.EventBusSubscriber(modid = ModernUI.ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 final class Registration {
 
     private Registration() {
     }
 
-    @SubscribeEvent
     static void register(@Nonnull RegisterEvent event) {
         if (ModernUIMod.sDevelopment) {
             event.register(ForgeRegistries.MENU_TYPES.getRegistryKey(), Registration::registerMenus);
@@ -82,16 +80,19 @@ final class Registration {
     }
 
     static void registerMenus(@Nonnull RegisterEvent.RegisterHelper<MenuType<?>> helper) {
-        helper.register(MuiRegistries.TEST_MENU_KEY, IForgeMenuType.create(TestContainerMenu::new));
+        helper.register(
+                ResourceKey.create(ForgeRegistries.MENU_TYPES.getRegistryKey(), MuiRegistries.testMenuKey()),
+                IForgeMenuType.create(TestContainerMenu::new)
+        );
     }
 
     static void registerItems(@Nonnull RegisterEvent.RegisterHelper<Item> helper) {
         Item.Properties properties = new Item.Properties().stacksTo(1);
-        properties.setId(ResourceKey.create(Registries.ITEM, MuiRegistries.PROJECT_BUILDER_ITEM_KEY));
-        helper.register(MuiRegistries.PROJECT_BUILDER_ITEM_KEY, new ProjectBuilderItem(properties));
+        ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, MuiRegistries.projectBuilderItemKey());
+        properties.setId(key);
+        helper.register(key, new ProjectBuilderItem(properties));
     }
 
-    @SubscribeEvent
     static void setupCommon(@Nonnull FMLCommonSetupEvent event) {
         /*byte[] bytes = null;
         try (InputStream stream = ModernUIForge.class.getClassLoader().getResourceAsStream(
@@ -152,7 +153,6 @@ final class Registration {
         return sb.toString();
     }*/
 
-    @Mod.EventBusSubscriber(modid = ModernUI.ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     static class ModClient {
 
         static {
@@ -169,40 +169,11 @@ final class Registration {
             UIManagerForge.initialize();
         }*/
 
-        @SubscribeEvent
-        static void registerResourceListener(@Nonnull RegisterClientReloadListenersEvent event) {
-            // this event fired after LOAD_REGISTRIES and before COMMON_SETUP on client main thread (render thread)
-            // this event fired after ParticleFactoryRegisterEvent
-            event.registerReloadListener((ResourceManagerReloadListener) manager -> {
-                ImageStore.getInstance().clear();
-                Handler handler = Core.getUiHandlerAsync();
-                // FML may throw ex, so it can be null
-                if (handler != null) {
-                    // Call in lambda, not in creating the lambda
-                    handler.post(() -> UIManager.getInstance().updateLayoutDir(ConfigImpl.CLIENT.mForceRtl.get()));
-                }
-                //BlurHandler.INSTANCE.loadEffect();
-            });
-            if (!ModernUIMod.isTextEngineEnabled()) {
-                event.registerReloadListener(FontResourceManager.getInstance());
-            }
-            // else injected by MixinFontManager
-
-            LOGGER.debug(MARKER, "Registered resource reload listener");
-        }
-
-        @SubscribeEvent
-        static void registerKeyMapping(@Nonnull RegisterKeyMappingsEvent event) {
-            event.register(UIManagerForge.OPEN_CENTER_KEY);
-            event.register(UIManagerForge.ZOOM_KEY);
-        }
-
         /*@SubscribeEvent
         static void registerCapabilities(@Nonnull RegisterCapabilitiesEvent event) {
             event.register(ScreenCallback.class);
         }*/
 
-        @SubscribeEvent
         static void setupClient(@Nonnull FMLClientSetupEvent event) {
             //SettingsManager.INSTANCE.buildAllSettings();
             //UIManager.getInstance().registerMenuScreen(Registration.TEST_MENU, menu -> new TestUI());
@@ -213,8 +184,10 @@ final class Registration {
                 // ensure it's applied and positioned
                 Config.CLIENT.mLastWindowMode.apply();
                 if (ModernUIMod.sDevelopment) {
-                    MenuScreens.register(MuiRegistries.TEST_MENU.get(), MenuScreenFactory.create(menu ->
-                            new TestPauseFragment()));
+                    if (MuiRegistries.TEST_MENU.isPresent()) {
+                        MenuScreens.register(MuiRegistries.TEST_MENU.get(), MenuScreenFactory.create(menu ->
+                                new TestPauseFragment()));
+                    }
                 }
             });
 

@@ -29,29 +29,38 @@ import icyllis.arc3d.opengl.GLDevice;
 import icyllis.arc3d.opengl.GLTexture;
 import icyllis.modernui.annotation.RenderThread;
 import icyllis.modernui.core.Core;
+import icyllis.modernui.mc.ModernUIMod;
+import icyllis.modernui.mc.SamplerCompat;
+import icyllis.modernui.mc.TextureManagerCompat;
 import icyllis.modernui.mc.MuiModApi;
 import icyllis.modernui.mc.b3d.GlTexture_Wrapped;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderType;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
 import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * @since 2.0.1
  */
-public abstract class EffectRenderType extends RenderType {
+public final class EffectRenderType {
+
+    private static final Object WHITE_TEXTURE_ID =
+            ModernUIMod.location("internal/modern_text_effect_white");
+    private static final Supplier<Object> WHITE_SAMPLER =
+            () -> SamplerCompat.clampToEdge(FilterMode.NEAREST);
 
     private static GLTexture WHITE;
     private static GlTexture_Wrapped WHITE_WRAPPER = null;
     private static GpuTextureView WHITE_WRAPPER_VIEW = null;
 
-    private static RenderType TYPE;
-    private static RenderType SEE_THROUGH_TYPE;
-    private static RenderType POLYGON_OFFSET_TYPE;
+    private static Object TYPE;
+    private static Object SEE_THROUGH_TYPE;
+    private static Object POLYGON_OFFSET_TYPE;
 
     /*static {
         TYPE = new EffectRenderType("modern_text_effect", 256, () -> {
@@ -68,17 +77,16 @@ public abstract class EffectRenderType extends RenderType {
         }, () -> TextRenderType.POLYGON_OFFSET_STATES.forEach(RenderStateShard::clearRenderState));
     }*/
 
-    private EffectRenderType(String name, int bufferSize, Runnable setupState, Runnable clearState) {
-        super(name, /*DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, VertexFormat.Mode.QUADS,*/
-                bufferSize, false, true, setupState, clearState);
+    private EffectRenderType() {
     }
 
     @RenderThread
     @Nonnull
-    public static RenderType getRenderType(boolean seeThrough, boolean polygonOffset) {
+    @SuppressWarnings("unchecked")
+    public static <RT> RT getRenderType(boolean seeThrough, boolean polygonOffset) {
         if (WHITE == null)
             makeWhiteTexture();
-        return polygonOffset ? POLYGON_OFFSET_TYPE : seeThrough ? SEE_THROUGH_TYPE : TYPE;
+        return (RT) (polygonOffset ? POLYGON_OFFSET_TYPE : seeThrough ? SEE_THROUGH_TYPE : TYPE);
     }
 
     /*@RenderThread
@@ -101,6 +109,7 @@ public abstract class EffectRenderType extends RenderType {
 
     public static void clear() {
         if (WHITE != null) {
+            TextureManagerCompat.release(Minecraft.getInstance().getTextureManager(), WHITE_TEXTURE_ID);
             WHITE_WRAPPER_VIEW.close();
             WHITE_WRAPPER.close();
             WHITE = null;
@@ -153,19 +162,27 @@ public abstract class EffectRenderType extends RenderType {
         WHITE_WRAPPER = new GlTexture_Wrapped(WHITE); // transfer ownership
         WHITE_WRAPPER_VIEW = MuiModApi.get().getRealGpuDevice().createTextureView(WHITE_WRAPPER);
 
-        WHITE_WRAPPER.setTextureFilter(FilterMode.NEAREST, false);
+        TextureManagerCompat.register(
+                Minecraft.getInstance().getTextureManager(),
+                WHITE_TEXTURE_ID,
+                new TextureViewBackedTexture(WHITE_WRAPPER_VIEW, WHITE_SAMPLER)
+        );
 
+        Supplier<Object> sampler = SamplerCompat.isSupported() ? WHITE_SAMPLER : null;
         TYPE = MuiModApi.get().createRenderType("modern_text_effect", 256,
                 false, true, RenderPipelines.TEXT,
-                new TextRenderType.ExtendedTextureStateShard(WHITE_WRAPPER_VIEW),
+                WHITE_TEXTURE_ID,
+                sampler,
                 true);
         SEE_THROUGH_TYPE = MuiModApi.get().createRenderType("modern_text_effect_see_through", 256,
                 false, true, RenderPipelines.TEXT_SEE_THROUGH,
-                new TextRenderType.ExtendedTextureStateShard(WHITE_WRAPPER_VIEW),
+                WHITE_TEXTURE_ID,
+                sampler,
                 true);
         POLYGON_OFFSET_TYPE = MuiModApi.get().createRenderType("modern_text_effect_polygon_offset", 256,
                 false, true, RenderPipelines.TEXT_POLYGON_OFFSET,
-                new TextRenderType.ExtendedTextureStateShard(WHITE_WRAPPER_VIEW),
+                WHITE_TEXTURE_ID,
+                sampler,
                 true);
     }
 }

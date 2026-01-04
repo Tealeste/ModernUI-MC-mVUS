@@ -27,6 +27,7 @@ import icyllis.modernui.mc.*;
 import icyllis.modernui.mc.ui.CenterFragment2;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import org.jetbrains.annotations.ApiStatus;
@@ -40,10 +41,13 @@ import static org.lwjgl.glfw.GLFW.*;
 @ApiStatus.Internal
 public final class UIManagerFabric extends UIManager {
 
+    private static final KeyMapping.Category MODERN_UI_CATEGORY =
+            KeyMapping.Category.register(ModernUIMod.location("modern_ui"));
+
     @SuppressWarnings("NoTranslation")
     public static final KeyMapping OPEN_CENTER_KEY = new KeyMapping(
             "key.modernui.openCenter",
-            InputConstants.Type.KEYSYM, GLFW_KEY_K, "Modern UI");
+            InputConstants.Type.KEYSYM, GLFW_KEY_K, MODERN_UI_CATEGORY);
 
     private UIManagerFabric() {
         super();
@@ -101,7 +105,7 @@ public final class UIManagerFabric extends UIManager {
             if (minecraft.screen == null ||
                     minecraft.screen.shouldCloseOnEsc() ||
                     minecraft.screen instanceof TitleScreen) {
-                if (Screen.hasControlDown() && OPEN_CENTER_KEY.matches(keyCode, scanCode)) {
+                if ((mods & GLFW_MOD_CONTROL) != 0 && OPEN_CENTER_KEY.matches(new KeyEvent(keyCode, scanCode, mods))) {
                     open(new CenterFragment2());
                     return;
                 }

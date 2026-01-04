@@ -21,7 +21,6 @@ package icyllis.modernui.mc.text;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
@@ -34,18 +33,22 @@ import icyllis.arc3d.opengl.GLCaps;
 import icyllis.arc3d.opengl.GLSampler;
 import icyllis.modernui.core.Core;
 import icyllis.modernui.mc.ModernUIMod;
+import icyllis.modernui.mc.RenderPipelineCompat;
 import icyllis.modernui.mc.MuiModApi;
+import icyllis.modernui.mc.SamplerCompat;
+import icyllis.modernui.mc.TextureManagerCompat;
 import icyllis.modernui.mc.text.mixin.AccessBufferSource;
-import icyllis.modernui.mc.text.mixin.AccessGpuTexture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.*;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.TextureManager;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import static icyllis.modernui.mc.ModernUIMod.LOGGER;
 import static icyllis.modernui.mc.text.TextLayoutEngine.MARKER;
@@ -53,7 +56,7 @@ import static icyllis.modernui.mc.text.TextLayoutEngine.MARKER;
 /**
  * Fast and modern text render type.
  */
-public abstract class TextRenderType extends RenderType {
+public final class TextRenderType {
 
     public static final int MODE_NORMAL = 0; // <- must be zero
     public static final int MODE_SDF_FILL = 1;
@@ -67,10 +70,10 @@ public abstract class TextRenderType extends RenderType {
      */
     public static final int MODE_UNIFORM_SCALE = 4; // <- must be power of 2
 
-    public static final RenderPipeline PIPELINE_NORMAL = RenderPipeline.builder()
-            .withLocation(ModernUIMod.location("pipeline/modern_text_normal"))
-            .withVertexShader(ResourceLocation.withDefaultNamespace("core/rendertype_text_intensity"))
-            .withFragmentShader(ModernUIMod.location("core/rendertype_modern_text_normal"))
+    public static final RenderPipeline PIPELINE_NORMAL = withFragmentShader(
+            withLocation(RenderPipeline.builder(), "pipeline/modern_text_normal")
+                    .withVertexShader("core/rendertype_text_intensity"),
+            "core/rendertype_modern_text_normal")
             .withUniform("Fog", UniformType.UNIFORM_BUFFER)
             .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
             .withUniform("Projection", UniformType.UNIFORM_BUFFER)
@@ -81,7 +84,7 @@ public abstract class TextRenderType extends RenderType {
             .build();
 
     public static final RenderPipeline.Snippet PIPELINE_SDF_SNIPPET = RenderPipeline.builder()
-            .withVertexShader(ResourceLocation.withDefaultNamespace("core/rendertype_text_intensity"))
+            .withVertexShader("core/rendertype_text_intensity")
             .withUniform("Fog", UniformType.UNIFORM_BUFFER)
             .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
             .withUniform("Projection", UniformType.UNIFORM_BUFFER)
@@ -91,15 +94,15 @@ public abstract class TextRenderType extends RenderType {
             .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, VertexFormat.Mode.QUADS)
             .buildSnippet();
 
-    public static final RenderPipeline PIPELINE_SDF_FILL = RenderPipeline.builder(PIPELINE_SDF_SNIPPET)
-            .withLocation(ModernUIMod.location("pipeline/modern_text_sdf_fill"))
-            .withFragmentShader(ModernUIMod.location("core/rendertype_modern_text_sdf_fill"))
+    public static final RenderPipeline PIPELINE_SDF_FILL = withFragmentShader(
+            withLocation(RenderPipeline.builder(PIPELINE_SDF_SNIPPET), "pipeline/modern_text_sdf_fill"),
+            "core/rendertype_modern_text_sdf_fill")
             .withDepthBias(-1.0F, -10.0F)
             .build();
 
-    public static final RenderPipeline PIPELINE_SDF_STROKE = RenderPipeline.builder(PIPELINE_SDF_SNIPPET)
-            .withLocation(ModernUIMod.location("pipeline/modern_text_sdf_stroke"))
-            .withFragmentShader(ModernUIMod.location("core/rendertype_modern_text_sdf_stroke"))
+    public static final RenderPipeline PIPELINE_SDF_STROKE = withFragmentShader(
+            withLocation(RenderPipeline.builder(PIPELINE_SDF_SNIPPET), "pipeline/modern_text_sdf_stroke"),
+            "core/rendertype_modern_text_sdf_stroke")
             .withDepthBias(-1.0F, -10.0F)
             .build();
 
@@ -107,15 +110,15 @@ public abstract class TextRenderType extends RenderType {
     private static volatile RenderPipeline sCurrentPipelineSDFStroke = PIPELINE_SDF_STROKE;
 
     // Hey buddy, I think you've got the wrong door, the leather club's two blocks down
-    public static final RenderPipeline PIPELINE_SDF_FILL_SMART = RenderPipeline.builder(PIPELINE_SDF_SNIPPET)
-            .withLocation(ModernUIMod.location("pipeline/modern_text_sdf_fill_smart"))
-            .withFragmentShader(ModernUIMod.location("core/rendertype_modern_text_sdf_fill_400"))
+    public static final RenderPipeline PIPELINE_SDF_FILL_SMART = withFragmentShader(
+            withLocation(RenderPipeline.builder(PIPELINE_SDF_SNIPPET), "pipeline/modern_text_sdf_fill_smart"),
+            "core/rendertype_modern_text_sdf_fill_400")
             .withDepthBias(-1.0F, -10.0F)
             .build();
 
-    public static final RenderPipeline PIPELINE_SDF_STROKE_SMART = RenderPipeline.builder(PIPELINE_SDF_SNIPPET)
-            .withLocation(ModernUIMod.location("pipeline/modern_text_sdf_stroke_smart"))
-            .withFragmentShader(ModernUIMod.location("core/rendertype_modern_text_sdf_stroke_400"))
+    public static final RenderPipeline PIPELINE_SDF_STROKE_SMART = withFragmentShader(
+            withLocation(RenderPipeline.builder(PIPELINE_SDF_SNIPPET), "pipeline/modern_text_sdf_stroke_smart"),
+            "core/rendertype_modern_text_sdf_stroke_400")
             .withDepthBias(-1.0F, -10.0F)
             .build();
 
@@ -155,6 +158,14 @@ public abstract class TextRenderType extends RenderType {
             RENDERTYPE_MODERN_TEXT_SDF_FILL = new ShaderStateShard(TextRenderType::getShaderSDFFill),
             RENDERTYPE_MODERN_TEXT_SDF_STROKE = new ShaderStateShard(TextRenderType::getShaderSDFStroke);*/
 
+    private static RenderPipeline.Builder withLocation(RenderPipeline.Builder builder, String path) {
+        return RenderPipelineCompat.withLocation(builder, ModernUIMod.location(path));
+    }
+
+    private static RenderPipeline.Builder withFragmentShader(RenderPipeline.Builder builder, String path) {
+        return RenderPipelineCompat.withFragmentShader(builder, ModernUIMod.location(path));
+    }
+
     /*
      * Only the texture id is different, the rest state are same
      */
@@ -168,17 +179,17 @@ public abstract class TextRenderType extends RenderType {
     /**
      * Texture id to render type map
      */
-    private static final HashMap<GpuTextureView, RenderType> sNormalTypes = new HashMap<>();
-    private static final HashMap<GpuTextureView, RenderType> sSDFFillTypes = new HashMap<>();
-    private static final HashMap<GpuTextureView, RenderType> sSDFStrokeTypes = new HashMap<>();
-    private static final HashMap<GpuTextureView, RenderType> sVanillaTypes = new HashMap<>();
-    private static final HashMap<GpuTextureView, RenderType> sSeeThroughTypes = new HashMap<>();
-    private static final HashMap<GpuTextureView, RenderType> sPolygonOffsetTypes = new HashMap<>();
+    private static final HashMap<GpuTextureView, Object> sNormalTypes = new HashMap<>();
+    private static final HashMap<GpuTextureView, Object> sSDFFillTypes = new HashMap<>();
+    private static final HashMap<GpuTextureView, Object> sSDFStrokeTypes = new HashMap<>();
+    private static final HashMap<GpuTextureView, Object> sVanillaTypes = new HashMap<>();
+    private static final HashMap<GpuTextureView, Object> sSeeThroughTypes = new HashMap<>();
+    private static final HashMap<GpuTextureView, Object> sPolygonOffsetTypes = new HashMap<>();
 
-    private static RenderType sFirstSDFFillType;
+    private static Object sFirstSDFFillType;
     private static final ByteBufferBuilder sFirstSDFFillBuffer = new ByteBufferBuilder(131072);
 
-    private static RenderType sFirstSDFStrokeType;
+    private static Object sFirstSDFStrokeType;
     private static final ByteBufferBuilder sFirstSDFStrokeBuffer = new ByteBufferBuilder(131072);
 
     // SDF requires bilinear sampling
@@ -266,14 +277,41 @@ public abstract class TextRenderType extends RenderType {
         );*/
     }
 
-    private TextRenderType(String name, int bufferSize, Runnable setupState, Runnable clearState) {
-        super(name, /*DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, VertexFormat.Mode.QUADS,*/
-                bufferSize, false, true, setupState, clearState);
+    private static final Supplier<Object> DEFAULT_SAMPLER =
+            () -> SamplerCompat.clampToEdge(FilterMode.NEAREST);
+    private static final Supplier<Object> SDF_SAMPLER =
+            () -> SamplerCompat.clampToEdge(FilterMode.LINEAR, true);
+
+    @Nonnull
+    static Object getSamplerForGui(int mode) {
+        return switch (mode) {
+            case MODE_SDF_FILL, MODE_SDF_STROKE -> SDF_SAMPLER.get();
+            default -> DEFAULT_SAMPLER.get();
+        };
+    }
+
+    private static final IdentityHashMap<GpuTextureView, Object> sTextureIds = new IdentityHashMap<>();
+    private static int sNextTextureId = 0;
+
+    private TextRenderType() {
+    }
+
+    private static synchronized Object getOrRegisterTextureId(GpuTextureView texture) {
+        Object id = sTextureIds.get(texture);
+        if (id != null) {
+            return id;
+        }
+        id = ModernUIMod.location("internal/text_texture/" + (sNextTextureId++));
+        TextureManager textureManager = Minecraft.getInstance().getTextureManager();
+        TextureManagerCompat.register(textureManager, id, new TextureViewBackedTexture(texture, DEFAULT_SAMPLER));
+        sTextureIds.put(texture, id);
+        return id;
     }
 
     @Nonnull
-    public static RenderType getOrCreate(GpuTextureView texture, int mode) {
-        return switch (mode) {
+    @SuppressWarnings("unchecked")
+    public static <RT> RT getOrCreate(GpuTextureView texture, int mode) {
+        return (RT) switch (mode) {
             case MODE_SDF_FILL -> {
                 if (!TextLayoutEngine.sCurrentInWorldRendering || TextLayoutEngine.sUseTextShadersInWorld) {
                     yield sSDFFillTypes.computeIfAbsent(texture, TextRenderType::makeSDFFillType);
@@ -295,8 +333,9 @@ public abstract class TextRenderType extends RenderType {
 
     // compatibility
     @Nonnull
-    public static RenderType getOrCreate(GpuTextureView texture, Font.DisplayMode mode, boolean isBitmapFont) {
-        return switch (mode) {
+    @SuppressWarnings("unchecked")
+    public static <RT> RT getOrCreate(GpuTextureView texture, Font.DisplayMode mode, boolean isBitmapFont) {
+        return (RT) switch (mode) {
             case SEE_THROUGH -> sSeeThroughTypes.computeIfAbsent(texture, TextRenderType::makeSeeThroughType);
             case POLYGON_OFFSET -> sPolygonOffsetTypes.computeIfAbsent(texture, TextRenderType::makePolygonOffsetType);
             default -> isBitmapFont || (TextLayoutEngine.sCurrentInWorldRendering && !TextLayoutEngine.sUseTextShadersInWorld)
@@ -315,10 +354,12 @@ public abstract class TextRenderType extends RenderType {
     }
 
     @Nonnull
-    private static RenderType makeNormalType(GpuTextureView texture) {
+    private static Object makeNormalType(GpuTextureView texture) {
+        Supplier<Object> sampler = SamplerCompat.isSupported() ? DEFAULT_SAMPLER : null;
         return MuiModApi.get().createRenderType("modern_text_normal", 256,
                 false, true, PIPELINE_NORMAL,
-                new ExtendedTextureStateShard(texture),
+                getOrRegisterTextureId(texture),
+                sampler,
                 true);
     }
 
@@ -333,7 +374,7 @@ public abstract class TextRenderType extends RenderType {
     }*/
 
     @Nonnull
-    private static RenderType makeSDFFillType(GpuTextureView texture) {
+    private static Object makeSDFFillType(GpuTextureView texture) {
         /*ensureLinearFontSampler();
         TextRenderType renderType = new TextRenderType("modern_text_sdf_fill", 256, () -> {
             //RenderSystem.setShader(getShaderSDFFill());
@@ -348,9 +389,10 @@ public abstract class TextRenderType extends RenderType {
                 GL33C.glBindSampler(0, 0);
             }
         });*/
-        RenderType renderType = MuiModApi.get().createRenderType("modern_text_sdf_fill", 256,
+        Object renderType = MuiModApi.get().createRenderType("modern_text_sdf_fill", 256,
                 false, true, sCurrentPipelineSDFFill,
-                new ExtendedTextureStateShard(texture, FilterMode.LINEAR, FilterMode.LINEAR, true),
+                getOrRegisterTextureId(texture),
+                SDF_SAMPLER,
                 true);
         if (sFirstSDFFillType == null) {
             assert (sSDFFillTypes.isEmpty());
@@ -368,7 +410,7 @@ public abstract class TextRenderType extends RenderType {
     }
 
     @Nonnull
-    private static RenderType makeSDFStrokeType(GpuTextureView texture) {
+    private static Object makeSDFStrokeType(GpuTextureView texture) {
         /*ensureLinearFontSampler();
         TextRenderType renderType = new TextRenderType("modern_text_sdf_stroke", 256, () -> {
             //RenderSystem.setShader(getShaderSDFStroke());
@@ -383,9 +425,10 @@ public abstract class TextRenderType extends RenderType {
                 GL33C.glBindSampler(0, 0);
             }
         });*/
-        RenderType renderType = MuiModApi.get().createRenderType("modern_text_sdf_stroke", 256,
+        Object renderType = MuiModApi.get().createRenderType("modern_text_sdf_stroke", 256,
                 false, true, sCurrentPipelineSDFStroke,
-                new ExtendedTextureStateShard(texture, FilterMode.LINEAR, FilterMode.LINEAR, true),
+                getOrRegisterTextureId(texture),
+                SDF_SAMPLER,
                 true);
         if (sFirstSDFStrokeType == null) {
             assert (sSDFStrokeTypes.isEmpty());
@@ -403,38 +446,44 @@ public abstract class TextRenderType extends RenderType {
     }
 
     @Nonnull
-    private static RenderType makeVanillaType(GpuTextureView texture) {
+    private static Object makeVanillaType(GpuTextureView texture) {
+        Supplier<Object> sampler = SamplerCompat.isSupported() ? DEFAULT_SAMPLER : null;
         /*return new TextRenderType("modern_text_vanilla", 256, () -> {
             VANILLA_STATES.forEach(RenderStateShard::setupRenderState);
             //RenderSystem.setShaderTexture(0, texture);
         }, () -> VANILLA_STATES.forEach(RenderStateShard::clearRenderState));*/
         return MuiModApi.get().createRenderType("modern_text_vanilla", 256,
                 false, true, RenderPipelines.TEXT,
-                new ExtendedTextureStateShard(texture),
+                getOrRegisterTextureId(texture),
+                sampler,
                 true);
     }
 
     @Nonnull
-    private static RenderType makeSeeThroughType(GpuTextureView texture) {
+    private static Object makeSeeThroughType(GpuTextureView texture) {
+        Supplier<Object> sampler = SamplerCompat.isSupported() ? DEFAULT_SAMPLER : null;
         /*return new TextRenderType("modern_text_see_through", 256, () -> {
             SEE_THROUGH_STATES.forEach(RenderStateShard::setupRenderState);
             //RenderSystem.setShaderTexture(0, texture);
         }, () -> SEE_THROUGH_STATES.forEach(RenderStateShard::clearRenderState));*/
         return MuiModApi.get().createRenderType("modern_text_see_through", 256,
                 false, true, RenderPipelines.TEXT_SEE_THROUGH,
-                new ExtendedTextureStateShard(texture),
+                getOrRegisterTextureId(texture),
+                sampler,
                 true);
     }
 
     @Nonnull
-    private static RenderType makePolygonOffsetType(GpuTextureView texture) {
+    private static Object makePolygonOffsetType(GpuTextureView texture) {
+        Supplier<Object> sampler = SamplerCompat.isSupported() ? DEFAULT_SAMPLER : null;
         /*return new TextRenderType("modern_text_polygon_offset", 256, () -> {
             POLYGON_OFFSET_STATES.forEach(RenderStateShard::setupRenderState);
             //RenderSystem.setShaderTexture(0, texture);
         }, () -> POLYGON_OFFSET_STATES.forEach(RenderStateShard::clearRenderState));*/
         return MuiModApi.get().createRenderType("modern_text_polygon_offset", 256,
                 false, true, RenderPipelines.TEXT_POLYGON_OFFSET,
-                new ExtendedTextureStateShard(texture),
+                getOrRegisterTextureId(texture),
+                sampler,
                 true);
     }
 
@@ -444,7 +493,7 @@ public abstract class TextRenderType extends RenderType {
      * We use a single atlas for batch rendering to improve performance.
      */
     @Nullable
-    public static RenderType getFirstSDFFillType() {
+    public static Object getFirstSDFFillType() {
         return sFirstSDFFillType;
     }
 
@@ -454,7 +503,7 @@ public abstract class TextRenderType extends RenderType {
      * @see #getFirstSDFFillType()
      */
     @Nullable
-    public static RenderType getFirstSDFStrokeType() {
+    public static Object getFirstSDFStrokeType() {
         return sFirstSDFStrokeType;
     }
 
@@ -483,6 +532,13 @@ public abstract class TextRenderType extends RenderType {
         sVanillaTypes.clear();
         sSeeThroughTypes.clear();
         sPolygonOffsetTypes.clear();
+        if (!sTextureIds.isEmpty()) {
+            TextureManager textureManager = Minecraft.getInstance().getTextureManager();
+            for (Object id : sTextureIds.values()) {
+                TextureManagerCompat.release(textureManager, id);
+            }
+            sTextureIds.clear();
+        }
         sFirstSDFFillBuffer.clear();
         sFirstSDFStrokeBuffer.clear();
         if (cleanup) {
@@ -538,36 +594,6 @@ public abstract class TextRenderType extends RenderType {
             return true;
         }
         return false;
-    }
-
-    public static class ExtendedTextureStateShard extends EmptyTextureStateShard {
-
-        public ExtendedTextureStateShard(final GpuTextureView textureView) {
-            super(() -> RenderSystem.setShaderTexture(0, textureView), () -> {
-            });
-        }
-
-        // yes we can use a sampler object now, but it may not be possible in the future
-        public ExtendedTextureStateShard(final GpuTextureView textureView,
-                                         final FilterMode minFilter, final FilterMode magFilter,
-                                         final boolean useMipmaps) {
-            super(() -> {
-                GpuTexture texture = textureView.texture();
-                texture.setTextureFilter(minFilter, magFilter, useMipmaps);
-                RenderSystem.setShaderTexture(0, textureView);
-            }, restoreSampler(textureView));
-        }
-
-        private static Runnable restoreSampler(final GpuTextureView textureView) {
-            AccessGpuTexture access = (AccessGpuTexture) textureView.texture();
-            final FilterMode oldMinFilter = access.getMinFilter();
-            final FilterMode oldMagFilter = access.getMagFilter();
-            final boolean oldUseMipmaps = access.getUseMipmaps();
-            return () -> {
-                GpuTexture texture = textureView.texture();
-                texture.setTextureFilter(oldMinFilter, oldMagFilter, oldUseMipmaps);
-            };
-        }
     }
 
     /*

@@ -23,9 +23,9 @@ import icyllis.modernui.core.UndoManager;
 import icyllis.modernui.core.UndoOwner;
 import icyllis.modernui.mc.*;
 import icyllis.modernui.text.method.WordIterator;
-import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
 import org.lwjgl.glfw.GLFW;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.*;
@@ -70,7 +70,7 @@ public abstract class MixinEditBox implements IModernEditBox {
      */
     @Inject(method = "setCursorPosition", at = @At("RETURN"))
     public void onSetCursorPosition(int pos, CallbackInfo ci) {
-        focusedTime = Util.getMillis();
+        focusedTime = UtilCompat.getMillis();
     }
 
     @Inject(method = "getCursorPos", at = @At("HEAD"), cancellable = true)
@@ -146,7 +146,7 @@ public abstract class MixinEditBox implements IModernEditBox {
                 i,
                 /*newText*/ string2
         );
-        final long nanos = Util.getNanos();
+        final long nanos = UtilCompat.getNanos();
         final boolean mergeInsert;
         // Minecraft split IME batch commit and even a single code point into code units,
         // if two charTyped() occur at the same time (<= 3ms), try to merge (concat) them.
@@ -204,15 +204,17 @@ public abstract class MixinEditBox implements IModernEditBox {
     @Inject(method = "keyPressed",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/gui/screens/Screen;isSelectAll(I)Z"
+                    target = "Lnet/minecraft/client/input/KeyEvent;isSelectAll()Z"
             ),
             cancellable = true)
-    public void onKeyPressed(int i, int j, int k, CallbackInfoReturnable<Boolean> cir) {
-        if (i == GLFW.GLFW_KEY_Z || i == GLFW.GLFW_KEY_Y) {
-            if (Screen.hasControlDown() && !Screen.hasAltDown()) {
-                if (!Screen.hasShiftDown()) {
+    public void onKeyPressed(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        int key = event.key();
+        if (key == GLFW.GLFW_KEY_Z || key == GLFW.GLFW_KEY_Y) {
+            var window = Minecraft.getInstance().getWindow();
+            if (KeyCompat.isControlDown(window) && !KeyCompat.isAltDown(window)) {
+                if (!KeyCompat.isShiftDown(window)) {
                     UndoOwner[] owners = {modernUI_MC$undoOwner()};
-                    if (i == GLFW.GLFW_KEY_Z) {
+                    if (key == GLFW.GLFW_KEY_Z) {
                         // CTRL+Z
                         if (modernUI_MC$undoManager.countUndos(owners) > 0) {
                             modernUI_MC$undoManager.undo(owners, 1);
@@ -222,7 +224,7 @@ public abstract class MixinEditBox implements IModernEditBox {
                         // CTRL+Y
                         cir.setReturnValue(true);
                     }
-                } else if (i == GLFW.GLFW_KEY_Z) {
+                } else if (key == GLFW.GLFW_KEY_Z) {
                     UndoOwner[] owners = {modernUI_MC$undoOwner()};
                     if (modernUI_MC$tryRedo(owners)) {
                         // CTRL+SHIFT+Z

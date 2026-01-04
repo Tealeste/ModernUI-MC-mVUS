@@ -139,6 +139,28 @@ Please set the JAVA_HOME variable in your environment to match the
 location of your Java installation."
 fi
 
+# ModernUI-MC requires running Gradle with Java 21 (newer JDKs break Groovy/Gradle script compilation).
+java_version=$("$JAVACMD" -version 2>&1 | awk -F\" '/version/ {print $2; exit}')
+java_major=${java_version%%.*}
+if [ "$java_major" = "1" ] ; then
+    java_major=$(echo "$java_version" | cut -d. -f2)
+fi
+case $java_major in #(
+  ''|*[!0-9]*)
+    ;;
+  *)
+    if [ "$java_major" -gt 21 ] ; then
+        die "ERROR: ModernUI-MC requires running Gradle with Java 21 (newer JDKs break Groovy/Gradle script compilation).
+
+Detected Java version: $java_version
+JAVA_HOME: ${JAVA_HOME:-<unset>}
+
+Fix: install JDK 21 and rerun with JAVA_HOME pointing to it, e.g.
+  JAVA_HOME=/path/to/jdk-21 ./gradlew buildReleaseJars"
+    fi
+    ;;
+esac
+
 # Increase the maximum file descriptors if we can.
 if ! "$cygwin" && ! "$darwin" && ! "$nonstop" ; then
     case $MAX_FD in #(

@@ -32,9 +32,10 @@ import icyllis.modernui.text.TextDirectionHeuristics;
 import it.unimi.dsi.fastutil.bytes.ByteArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.StringDecomposer;
@@ -104,7 +105,7 @@ public class TextLayoutProcessor {
     /**
      * Font names to use in logical order. Same indexing with {@link #mStyles}.
      */
-    private final ArrayList<ResourceLocation> mFontNames = new ArrayList<>();
+    private final ArrayList<Object> mFontNames = new ArrayList<>();
 
     /*
      * Array of temporary style carriers.
@@ -229,10 +230,21 @@ public class TextLayoutProcessor {
         int charCount = mBuilder.addCodePoint(codePoint);
         while (charCount-- > 0) {
             mStyles.add(styleFlags);
-            mFontNames.add(style.getFont());
+            mFontNames.add(resolveFontId(style.getFont()));
         }
         return true;
     };
+
+    @Nonnull
+    static Object resolveFontId(@Nonnull FontDescription fontDescription) {
+        if (fontDescription instanceof FontDescription.Resource resource) {
+            return resource.id();
+        }
+        if (fontDescription instanceof FontDescription.AtlasSprite) {
+            return fontDescription;
+        }
+        return Minecraft.DEFAULT_FONT;
+    }
 
     /**
      * Transfer code points in logical order.
@@ -698,15 +710,15 @@ public class TextLayoutProcessor {
      * @param start start index (inclusive) of the text
      * @param limit end index (exclusive) of the text
      * @param isRtl layout direction
-     * @see #handleStyleRun(char[], int, int, boolean, int, ResourceLocation)
+     * @see #handleStyleRun(char[], int, int, boolean, int, Identifier)
      */
     private void handleBidiRun(@Nonnull char[] text, int start, int limit, boolean isRtl) {
         assert start < limit;
         final IntArrayList styles = mStyles;
-        final List<ResourceLocation> fonts = mFontNames;
+        final List<Object> fonts = mFontNames;
         int lastPos, currPos;
         int lastStyle, currStyle;
-        ResourceLocation lastFont, currFont;
+        Object lastFont, currFont;
         // Style runs are in visual order
         if (isRtl) {
             lastPos = limit - 1;
@@ -812,7 +824,11 @@ public class TextLayoutProcessor {
      * @see FontCollection#itemize(char[], int, int)
      */
     private void handleStyleRun(@Nonnull char[] text, int start, int limit, boolean isRtl,
-                                int styleFlags, ResourceLocation fontName) {
+                                int styleFlags, Object fontName) {
+        if (fontName instanceof FontDescription.AtlasSprite atlasSprite) {
+            handleAtlasSpriteRun(start, limit, isRtl, styleFlags, atlasSprite);
+            return;
+        }
         /*if (fastDigit) {
          *//*
          * Convert all digits in the string to a '0' before layout to ensure that any glyphs replaced on the fly
@@ -941,6 +957,31 @@ public class TextLayoutProcessor {
                 prevPos = currPos;
             }
         }
+    }
+
+    private void handleAtlasSpriteRun(int start, int limit, boolean isRtl, int styleFlags,
+                                      @Nonnull FontDescription.AtlasSprite atlasSprite) {
+        int resLevel = mEngine.getResLevel();
+        float advancePerGlyph = (float) DEFAULT_BASE_FONT_SIZE * resLevel;
+
+        byte fontId = mFontMap.computeIfAbsent(new AtlasSpriteFont(atlasSprite), mNextID);
+
+        int glyphFlags = styleFlags | CharacterStyle.ANY_BITMAP_REPLACEMENT;
+        mHasEffect |= (styleFlags & CharacterStyle.EFFECT_MASK) != 0;
+
+        int runLength = limit - start;
+        for (int i = 0; i < runLength; i++) {
+            int charIndex = isRtl ? (limit - 1 - i) : (start + i);
+            if (mComputeAdvances) {
+                mAdvances.set(charIndex, advancePerGlyph);
+            }
+            mGlyphs.add(AtlasSpriteFont.PLACEHOLDER_CODE_POINT);
+            mPositions.add(mTotalAdvance + (float) i * advancePerGlyph);
+            mPositions.add(0);
+            mFontIndices.add(fontId);
+            mGlyphFlags.add(glyphFlags);
+        }
+        mTotalAdvance += (float) runLength * advancePerGlyph;
     }
 
     /*

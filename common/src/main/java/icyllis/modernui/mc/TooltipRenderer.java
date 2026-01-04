@@ -33,7 +33,6 @@ import net.minecraft.client.gui.screens.inventory.tooltip.*;
 import net.minecraft.client.renderer.*;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.*;
 import net.minecraft.world.item.*;
 import org.jetbrains.annotations.ApiStatus;
@@ -529,7 +528,7 @@ public final class TooltipRenderer implements ScrollController.IListener {
                             @Nonnull List<ClientTooltipComponent> list, int mouseX, int mouseY,
                             @Nonnull Font font, int screenWidth, int screenHeight,
                             float partialX, float partialY, @Nullable ClientTooltipPositioner positioner,
-                            @Nullable ResourceLocation tooltipStyle) {
+                            @Nullable Object tooltipStyle) {
         mDraw = true;
 
         if (itemStack != mLastSeenItem || mNumDrawsInThisFrame > 0) {
@@ -697,8 +696,7 @@ public final class TooltipRenderer implements ScrollController.IListener {
 
         gr.pose().translate(partialX, partialY);
         if (tooltipStyle != null) {
-            TooltipRenderUtil.renderTooltipBackground(gr, drawX, drawY,
-                    tooltipWidth, tooltipHeight, tooltipStyle);
+            TooltipRenderUtilCompat.renderTooltipBackground(gr, drawX, drawY, tooltipWidth, tooltipHeight, tooltipStyle);
         }
         for (int i = 0; i < list.size(); i++) {
             ClientTooltipComponent component = list.get(i);
@@ -769,19 +767,22 @@ public final class TooltipRenderer implements ScrollController.IListener {
         } else {
             colorMatrix.zero();
         }
+        // 1.21.11 dropped the extra float parameter in DynamicUniforms#writeTransform.
+        // Store u_RainbowOffset in u_PushData2.w (alpha is unused by the shader otherwise).
+        colorMatrix.m03(rainbowOffset);
 
         // we expect local coordinates, concat pose with model view
         Matrix3x2f localMatrix = new Matrix3x2f(pose);
         localMatrix.translate(centerX, centerY);
 
-        mUniforms = RenderSystem.getDynamicUniforms()
-                .writeTransform(
-                        new Matrix4f().mul(localMatrix),
-                        pushData0,
-                        pushData1,
-                        colorMatrix,
-                        rainbowOffset
-                );
+        mUniforms = DynamicUniformsCompat.writeTransform(
+                RenderSystem.getDynamicUniforms(),
+                new Matrix4f().mul(localMatrix),
+                pushData0,
+                pushData1,
+                colorMatrix,
+                rainbowOffset
+        );
         // estimate the draw bounds, half stroke width + 0.5 AA bloat + shadow spread
         float extent = sBorderWidth / 2f + 0.5f + shadowRadius * 1.2f;
         float extentX = sizeX + extent;

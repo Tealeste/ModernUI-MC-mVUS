@@ -32,6 +32,9 @@ import icyllis.modernui.graphics.text.Font;
 import icyllis.modernui.graphics.text.*;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.lwjgl.BufferUtils;
@@ -361,6 +364,20 @@ public class GlyphManager {
                 // auto bake
                 return bitmapFont.getBakedGlyph(glyphId);
             }
+        } else if (font instanceof AtlasSpriteFont atlasSpriteFont) {
+            TextureAtlas atlas = Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(atlasSpriteFont.atlasId());
+            TextureAtlasSprite sprite = atlas.getSprite(atlasSpriteFont.spriteId());
+
+            GLBakedGlyph glyph = new GLBakedGlyph();
+            glyph.x = 0;
+            glyph.y = (int) (-TextLayoutEngine.BITMAP_SCALE * (float) TextLayoutProcessor.DEFAULT_BASE_FONT_SIZE);
+            glyph.width = (short) (TextLayoutEngine.BITMAP_SCALE * TextLayoutProcessor.DEFAULT_BASE_FONT_SIZE);
+            glyph.height = (short) (TextLayoutEngine.BITMAP_SCALE * TextLayoutProcessor.DEFAULT_BASE_FONT_SIZE);
+            glyph.u1 = sprite.getU0();
+            glyph.v1 = sprite.getV0();
+            glyph.u2 = sprite.getU1();
+            glyph.v2 = sprite.getV1();
+            return glyph;
         }
         return null;
     }

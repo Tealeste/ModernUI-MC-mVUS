@@ -19,7 +19,10 @@
 package icyllis.modernui.mc.text;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import icyllis.modernui.mc.SamplerCompat;
+import icyllis.modernui.mc.TextureSetupCompat;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.gui.render.state.GuiElementRenderState;
@@ -37,19 +40,19 @@ public record TextEffectRenderState(
         float totalAdvance, float shadowOffset
 ) implements GuiElementRenderState {
     @Override
-    public void buildVertices(@Nonnull VertexConsumer vertexConsumer, float z) {
+    public void buildVertices(@Nonnull VertexConsumer vertexConsumer) {
         int a = color >>> 24;
         int r = color >> 16 & 0xff;
         int g = color >> 8 & 0xff;
         int b = color & 0xff;
         final float baseline = top + TextLayout.sBaselineOffset;
         if (dropShadow && ModernTextRenderer.sAllowShadow) {
-            buildPass(vertexConsumer, z, r >> 2, g >> 2, b >> 2, a, baseline, true);
+            buildPass(vertexConsumer, r >> 2, g >> 2, b >> 2, a, baseline, true);
         }
-        buildPass(vertexConsumer, z, r, g, b, a, baseline, false);
+        buildPass(vertexConsumer, r, g, b, a, baseline, false);
     }
 
-    private void buildPass(@Nonnull VertexConsumer builder, float z,
+    private void buildPass(@Nonnull VertexConsumer builder,
                            final int startR, final int startG, final int startB, final int a,
                            float baseline, boolean isShadow) {
         int r;
@@ -85,11 +88,11 @@ public record TextEffectRenderState(
             final float rx1 = x + positions[i << 1];
             final float rx2 = x + ((i + 1 == e) ? totalAdvance : positions[(i + 1) << 1]);
             if ((bits & CharacterStyle.STRIKETHROUGH_MASK) != 0) {
-                TextRenderEffect.drawStrikethrough(pose, builder, rx1, rx2, baseline, z,
+                TextRenderEffect.drawStrikethrough(pose, builder, rx1, rx2, baseline, 0.0F,
                         r, g, b, a);
             }
             if ((bits & CharacterStyle.UNDERLINE_MASK) != 0) {
-                TextRenderEffect.drawUnderline(pose, builder, rx1, rx2, baseline, z,
+                TextRenderEffect.drawUnderline(pose, builder, rx1, rx2, baseline, 0.0F,
                         r, g, b, a);
             }
         }
@@ -104,7 +107,10 @@ public record TextEffectRenderState(
     @Nonnull
     @Override
     public TextureSetup textureSetup() {
-        return TextureSetup.singleTextureWithLightmap(EffectRenderType.getTexture());
+        return TextureSetupCompat.singleTextureWithLightmap(
+                EffectRenderType.getTexture(),
+                SamplerCompat.clampToEdge(FilterMode.NEAREST)
+        );
     }
 
     @Nullable

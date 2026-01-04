@@ -20,7 +20,6 @@ package icyllis.modernui.mc.testforge.shader.program;
 
 import icyllis.modernui.mc.ModernUIMod;
 import icyllis.modernui.mc.testforge.shader.GLProgram;
-import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.opengl.GL43C;
 
 import javax.annotation.Nonnull;
@@ -28,14 +27,14 @@ import javax.annotation.Nonnull;
 @Deprecated
 public class RectProgram extends GLProgram {
 
-    public static final ResourceLocation VERT = ModernUIMod.location("shaders/pos_color.vert");
-    public static final ResourceLocation VERT_TEX = ModernUIMod.location("shaders/pos_color_tex.vert");
+    public static final Object VERT = ModernUIMod.location("shaders/pos_color.vert");
+    public static final Object VERT_TEX = ModernUIMod.location("shaders/pos_color_tex.vert");
 
     private static RectProgram sFill;
     private static FillTex sFillTex;
     private static Feathered sFeathered;
 
-    private RectProgram(@Nonnull ResourceLocation vert, @Nonnull ResourceLocation frag) {
+    private RectProgram(@Nonnull Object vert, @Nonnull Object frag) {
         super();
     }
 

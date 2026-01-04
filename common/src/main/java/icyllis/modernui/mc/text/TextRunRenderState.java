@@ -47,7 +47,7 @@ public record TextRunRenderState(
         boolean isDirectMask, float density, float shadowOffset
 ) implements GuiElementRenderState {
     @Override
-    public void buildVertices(@Nonnull VertexConsumer vertexConsumer, float z) {
+    public void buildVertices(@Nonnull VertexConsumer vertexConsumer) {
         float invDensity = 1.0f / density;
         int a = color >>> 24;
         int r = color >> 16 & 0xff;
@@ -55,12 +55,12 @@ public record TextRunRenderState(
         int b = color & 0xff;
         final float baseline = top + TextLayout.sBaselineOffset;
         if (dropShadow && ModernTextRenderer.sAllowShadow && !isColorEmoji) {
-            buildPass(vertexConsumer, z, invDensity, r >> 2, g >> 2, b >> 2, a, baseline, true);
+            buildPass(vertexConsumer, invDensity, r >> 2, g >> 2, b >> 2, a, baseline, true);
         }
-        buildPass(vertexConsumer, z, invDensity, r, g, b, a, baseline, false);
+        buildPass(vertexConsumer, invDensity, r, g, b, a, baseline, false);
     }
 
-    private void buildPass(@Nonnull VertexConsumer builder, float z, float invDensity,
+    private void buildPass(@Nonnull VertexConsumer builder, float invDensity,
                            final int startR, final int startG, final int startB, final int a,
                            float baseline, boolean isShadow) {
         int r;
@@ -147,19 +147,19 @@ public record TextRunRenderState(
                 upSkew = 0.25f * ascent;
                 downSkew = 0.25f * (ascent - h);
             }
-            builder.addVertexWith2DPose(pose, rx + upSkew, ry, z)
+            builder.addVertexWith2DPose(pose, rx + upSkew, ry)
                     .setColor(r, g, b, a)
                     .setUv(glyph.u1, glyph.v1)
                     .setLight(LightTexture.FULL_BRIGHT);
-            builder.addVertexWith2DPose(pose, rx + downSkew, ry + h, z)
+            builder.addVertexWith2DPose(pose, rx + downSkew, ry + h)
                     .setColor(r, g, b, a)
                     .setUv(glyph.u1, glyph.v2)
                     .setLight(LightTexture.FULL_BRIGHT);
-            builder.addVertexWith2DPose(pose, rx + w + downSkew, ry + h, z)
+            builder.addVertexWith2DPose(pose, rx + w + downSkew, ry + h)
                     .setColor(r, g, b, a)
                     .setUv(glyph.u2, glyph.v2)
                     .setLight(LightTexture.FULL_BRIGHT);
-            builder.addVertexWith2DPose(pose, rx + w + upSkew, ry, z)
+            builder.addVertexWith2DPose(pose, rx + w + upSkew, ry)
                     .setColor(r, g, b, a)
                     .setUv(glyph.u2, glyph.v1)
                     .setLight(LightTexture.FULL_BRIGHT);

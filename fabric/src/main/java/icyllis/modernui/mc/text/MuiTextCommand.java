@@ -24,18 +24,19 @@ import com.mojang.brigadier.arguments.FloatArgumentType;
 import icyllis.modernui.ModernUI;
 import icyllis.modernui.graphics.text.Font;
 import icyllis.modernui.mc.ModernUIMod;
+import icyllis.modernui.mc.UtilCompat;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.Util;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.arguments.ComponentArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
 
 public class MuiTextCommand {
 
-    public static final ResourceLocation JB_MONO = ModernUIMod.location("jetbrains-mono-medium");
+    public static final FontDescription JB_MONO =
+            new FontDescription.Resource(ModernUIMod.location("jetbrains-mono-medium"));
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher,
                                 CommandBuildContext context) {
@@ -166,7 +167,7 @@ public class MuiTextCommand {
                 Component.literal(result)
                         .setStyle(Style.EMPTY.withFont(JB_MONO))
         );
-        Util.ioPool().execute(() -> ModernUIMod.LOGGER.info(TextLayoutEngine.MARKER, result));
+        UtilCompat.ioPool().execute(() -> ModernUIMod.LOGGER.info(TextLayoutEngine.MARKER, result));
     }
 
     private static void splitLines(FabricClientCommandSource source,
@@ -204,6 +205,6 @@ public class MuiTextCommand {
         String result = b.getString();
         source.sendFeedback(component);
         source.sendFeedback(b);
-        Util.ioPool().execute(() -> ModernUIMod.LOGGER.info(TextLayoutEngine.MARKER, result));
+        UtilCompat.ioPool().execute(() -> ModernUIMod.LOGGER.info(TextLayoutEngine.MARKER, result));
     }
 }

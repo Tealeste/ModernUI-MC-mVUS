@@ -20,7 +20,6 @@ package icyllis.modernui.mc.testforge.shader.program;
 
 import icyllis.modernui.mc.ModernUIMod;
 import icyllis.modernui.mc.testforge.shader.GLProgram;
-import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.opengl.GL43C;
 
 import javax.annotation.Nonnull;
@@ -31,7 +30,7 @@ public class ArcProgram extends GLProgram {
     private static Fill sFill;
     private static Stroke sStroke;
 
-    private ArcProgram(@Nonnull ResourceLocation vert, @Nonnull ResourceLocation frag) {
+    private ArcProgram(@Nonnull Object vert, @Nonnull Object frag) {
         super();
     }
 

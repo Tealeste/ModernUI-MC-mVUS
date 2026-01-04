@@ -32,7 +32,6 @@ import icyllis.modernui.graphics.MathUtil;
 import icyllis.modernui.graphics.text.GraphemeBreak;
 import icyllis.modernui.mc.mixin.MixinChatFormatting;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -42,11 +41,8 @@ import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Rarity;
@@ -57,6 +53,7 @@ import javax.annotation.Nullable;
 import java.io.PrintWriter;
 import java.util.ServiceLoader;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 /**
@@ -352,7 +349,7 @@ public abstract class MuiModApi {
         } else {
             op = GraphemeBreak.AFTER;
         }
-        int offset = Util.offsetByCodepoints(value, cursor, dir);
+        int offset = UtilCompat.offsetByCodepoints(value, cursor, dir);
         cursor = GraphemeBreak.getTextRunCursor(
                 value, ModernUI.getSelectedLocale(),
                 0, value.length(), cursor, op
@@ -398,7 +395,7 @@ public abstract class MuiModApi {
     public abstract boolean isGLVersionPromoted();
 
     @ApiStatus.Internal
-    public abstract void loadEffect(GameRenderer gr, ResourceLocation effect);
+    public abstract void loadEffect(GameRenderer gr, Object effect);
 
     /*public abstract ShaderInstance makeShaderInstance(ResourceProvider resourceProvider,
                                                       ResourceLocation resourceLocation,
@@ -419,12 +416,12 @@ public abstract class MuiModApi {
     @Nullable
     public abstract ScreenRectangle peekScissorStack(GuiGraphics graphics);
 
-    // textureState must subclass RenderStateShard.EmptyTextureStateShard, null = NO_TEXTURE
-    public abstract RenderType createRenderType(String name, int bufferSize,
-                                                boolean affectsCrumbling, boolean sortOnUpload,
-                                                RenderPipeline renderPipeline,
-                                                @Nullable RenderStateShard textureState,
-                                                boolean lightmap);
+    public abstract <RT> RT createRenderType(String name, int bufferSize,
+                                            boolean affectsCrumbling, boolean sortOnUpload,
+                                            RenderPipeline renderPipeline,
+                                            @Nullable Object texture,
+                                            @Nullable Supplier<?> sampler,
+                                            boolean lightmap);
 
     /*
      * Registers a callback to be called when {@link org.lwjgl.glfw.GLFWScrollCallback} is called.

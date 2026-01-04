@@ -21,7 +21,6 @@ package icyllis.modernui.mc.testforge.shader.program;
 import icyllis.modernui.annotation.RenderThread;
 import icyllis.modernui.mc.ModernUIMod;
 import icyllis.modernui.mc.testforge.shader.GLProgram;
-import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.opengl.GL43C;
 
 import javax.annotation.Nonnull;
@@ -33,7 +32,7 @@ public class RoundRectProgram extends GLProgram {
     private static FillTex sFillTex;
     private static Stroke sStroke;
 
-    private RoundRectProgram(@Nonnull ResourceLocation vert, @Nonnull ResourceLocation frag) {
+    private RoundRectProgram(@Nonnull Object vert, @Nonnull Object frag) {
         super();
     }
 
@@ -68,7 +67,7 @@ public class RoundRectProgram extends GLProgram {
             super(RectProgram.VERT, ModernUIMod.location("shaders/round_rect_fill.frag"));
         }
 
-        private Fill(@Nonnull ResourceLocation vert, @Nonnull ResourceLocation frag) {
+        private Fill(@Nonnull Object vert, @Nonnull Object frag) {
             super(vert, frag);
         }
 

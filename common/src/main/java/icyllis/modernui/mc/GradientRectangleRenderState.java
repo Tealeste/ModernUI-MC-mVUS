@@ -65,11 +65,11 @@ public record GradientRectangleRenderState(
     }
 
     @Override
-    public void buildVertices(@Nonnull VertexConsumer consumer, float z) {
-        consumer.addVertexWith2DPose(pose, right, bottom, z).setColor(colorLR);
-        consumer.addVertexWith2DPose(pose, right, top, z).setColor(colorUR);
-        consumer.addVertexWith2DPose(pose, left, top, z).setColor(colorUL);
-        consumer.addVertexWith2DPose(pose, left, bottom, z).setColor(colorLL);
+    public void buildVertices(@Nonnull VertexConsumer consumer) {
+        consumer.addVertexWith2DPose(pose, right, bottom).setColor(colorLR);
+        consumer.addVertexWith2DPose(pose, right, top).setColor(colorUR);
+        consumer.addVertexWith2DPose(pose, left, top).setColor(colorUL);
+        consumer.addVertexWith2DPose(pose, left, bottom).setColor(colorLL);
     }
 
     /**

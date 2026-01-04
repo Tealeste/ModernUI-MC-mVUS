@@ -107,10 +107,11 @@ public class FontResourceManager implements PreparableReloadListener {
      */
     @Nonnull
     @Override
-    public CompletableFuture<Void> reload(@Nonnull PreparationBarrier preparationBarrier,
-                                          @Nonnull ResourceManager resourceManager,
+    public CompletableFuture<Void> reload(@Nonnull PreparableReloadListener.SharedState sharedState,
                                           @Nonnull Executor preparationExecutor,
+                                          @Nonnull PreparationBarrier preparationBarrier,
                                           @Nonnull Executor reloadExecutor) {
+        ResourceManager resourceManager = sharedState.resourceManager();
         CompletableFuture<LoadResults> preparation;
         {
             final var results = new LoadResults();

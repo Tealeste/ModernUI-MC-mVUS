@@ -22,6 +22,7 @@ import icyllis.modernui.mc.MuiModApi;
 import icyllis.modernui.mc.ScrollController;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.neoforged.neoforge.client.gui.widget.ScrollPanel;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
@@ -70,8 +71,7 @@ public abstract class MixinScrollPanel implements ScrollController.IListener {
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (scrollY != 0) {
             modernUI_MC$mScrollController.setMaxScroll(getMaxScroll());
-            modernUI_MC$mScrollController.scrollBy(Math.round(-scrollY * getScrollAmount()));
-            return true;
+            return modernUI_MC$mScrollController.scrollBy((float) (-scrollY * getScrollAmount()));
         }
         return false;
     }
@@ -106,7 +106,7 @@ public abstract class MixinScrollPanel implements ScrollController.IListener {
      * @reason Smooth scrolling
      */
     @Overwrite
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
         if (scrolling) {
             int maxScroll = height - getBarHeight();
             float moved = (float) (deltaY / maxScroll);

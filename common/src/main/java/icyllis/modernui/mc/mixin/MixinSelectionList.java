@@ -26,6 +26,7 @@ import net.minecraft.client.gui.components.AbstractContainerWidget;
 import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -51,6 +52,9 @@ public abstract class MixinSelectionList extends AbstractContainerWidget impleme
     @Unique
     private boolean modernUI_MC$callSuperSetScrollAmount;
 
+    @Invoker("repositionEntries")
+    protected abstract void modernUI_MC$invokeRepositionEntries();
+
     /**
      * @author BloCamLimb
      */
@@ -60,11 +64,12 @@ public abstract class MixinSelectionList extends AbstractContainerWidget impleme
             return false;
         }
         if (scrollY != 0) {
-            if (modernUI_MC$scrollController != null) {
-                modernUI_MC$scrollController.setMaxScroll(maxScrollAmount());
-                modernUI_MC$scrollController.scrollBy(Math.round(-scrollY * 40));
-            } else {
-                super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+            if (modernUI_MC$scrollController == null) {
+                return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+            }
+            modernUI_MC$scrollController.setMaxScroll(maxScrollAmount());
+            if (!modernUI_MC$scrollController.scrollBy((float) (-scrollY * 40.0))) {
+                return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
             }
             return true;
         }
@@ -78,21 +83,6 @@ public abstract class MixinSelectionList extends AbstractContainerWidget impleme
             modernUI_MC$skipAnimationTo(scrollAmount());
         }
         modernUI_MC$scrollController.update(MuiModApi.getElapsedTime());
-    }
-
-    @Inject(method = "renderWidget", at = @At(value = "INVOKE", shift = At.Shift.BEFORE, target = "Lnet/minecraft/client" +
-            "/gui/components/AbstractSelectionList;renderHeader(Lnet/minecraft/client/gui/GuiGraphics;II)V"))
-    private void preRenderHeader(@Nonnull GuiGraphics gr, int mouseX, int mouseY, float partialTicks, CallbackInfo ci) {
-        gr.pose().pushMatrix();
-        gr.pose().translate(0,
-                ((int) (((int) scrollAmount() - scrollAmount()) * (float) minecraft.getWindow().getGuiScale())) / (float) minecraft.getWindow().getGuiScale());
-    }
-
-    @Inject(method = "renderWidget", at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lnet/minecraft/client" +
-            "/gui/components/AbstractSelectionList;renderHeader(Lnet/minecraft/client/gui/GuiGraphics;II)V"))
-    private void postRenderHeader(@Nonnull GuiGraphics gr, int mouseX, int mouseY, float partialTicks,
-                                  CallbackInfo ci) {
-        gr.pose().popMatrix();
     }
 
     @Inject(method = "renderWidget", at = @At(value = "INVOKE", shift = At.Shift.BEFORE, target = "Lnet/minecraft/client" +
@@ -116,8 +106,10 @@ public abstract class MixinSelectionList extends AbstractContainerWidget impleme
     public void setScrollAmount(double target) {
         if (modernUI_MC$scrollController != null && !modernUI_MC$callSuperSetScrollAmount) {
             modernUI_MC$skipAnimationTo(target);
-        } else
+        } else {
             super.setScrollAmount(target);
+            modernUI_MC$invokeRepositionEntries();
+        }
     }
 
     @Override

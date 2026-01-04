@@ -310,9 +310,7 @@ public class GLFontAtlas implements AutoCloseable {
                         ? GL_LINEAR_MIPMAP_LINEAR
                         : GL_NEAREST
         );*/
-        boolean linear = mLinearSampling && (sLinearSamplingA8Atlas ||
-                mMaskFormat == Engine.MASK_FORMAT_ARGB);   // color emoji requires linear sampling
-        mTextureWrapper.setTextureFilter(linear ? FilterMode.LINEAR : FilterMode.NEAREST, FilterMode.NEAREST, linear);
+        // Texture filtering is defined by GpuSamplers (RenderSetup), not on the texture itself.
 
         if (mMaskFormat == Engine.MASK_FORMAT_A8) {
             //XXX: un-premultiplied, so 111r rather than rrrr

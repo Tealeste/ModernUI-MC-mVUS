@@ -25,7 +25,6 @@ import icyllis.modernui.graphics.text.FontFamily;
 import icyllis.modernui.text.Typeface;
 import icyllis.modernui.view.WindowManager;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nonnull;
@@ -115,6 +114,7 @@ public abstract class ModernUIClient extends ModernUI {
         }
         return false;
     }
+
 
     public static String getBootstrapProperty(String key) {
         Properties props = getBootstrapProperties();
@@ -412,7 +412,7 @@ public abstract class ModernUIClient extends ModernUI {
     @Nonnull
     @Override
     public InputStream getResourceStream(@Nonnull String namespace, @Nonnull String path) throws IOException {
-        return Minecraft.getInstance().getResourceManager().open(ResourceLocation.fromNamespaceAndPath(namespace, path));
+        return Minecraft.getInstance().getResourceManager().open(ResourceIdCompat.fromNamespaceAndPath(namespace, path));
     }
 
     @Nonnull

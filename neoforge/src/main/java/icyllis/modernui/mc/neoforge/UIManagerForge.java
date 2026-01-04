@@ -28,10 +28,10 @@ import icyllis.modernui.mc.*;
 import icyllis.modernui.mc.ui.CenterFragment2;
 import icyllis.modernui.text.TextUtils;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.renderer.texture.*;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.util.ObfuscationReflectionHelper;
@@ -57,14 +57,17 @@ import static org.lwjgl.glfw.GLFW.*;
 @ApiStatus.Internal
 public final class UIManagerForge extends UIManager implements LifecycleOwner {
 
+    private static final KeyMapping.Category MODERN_UI_CATEGORY =
+            KeyMapping.Category.register(ModernUIMod.location("modern_ui"));
+
     @SuppressWarnings("NoTranslation")
     public static final KeyMapping OPEN_CENTER_KEY = new KeyMapping(
             "key.modernui.openCenter", KeyConflictContext.UNIVERSAL, KeyModifier.CONTROL,
-            InputConstants.Type.KEYSYM, GLFW_KEY_K, "Modern UI");
+            InputConstants.Type.KEYSYM, GLFW_KEY_K, MODERN_UI_CATEGORY);
     @SuppressWarnings("NoTranslation")
     public static final KeyMapping ZOOM_KEY = new KeyMapping(
             "key.modernui.zoom", KeyConflictContext.IN_GAME, KeyModifier.NONE,
-            InputConstants.Type.KEYSYM, GLFW_KEY_C, "Modern UI");
+            InputConstants.Type.KEYSYM, GLFW_KEY_C, MODERN_UI_CATEGORY);
 
     /*public static final Method SEND_TO_CHAT =
             ObfuscationReflectionHelper.findMethod(ChatComponent.class, "m_93790_",
@@ -81,7 +84,7 @@ public final class UIManagerForge extends UIManager implements LifecycleOwner {
             ObfuscationReflectionHelper.findField(AbstractTexture.class, "id");*/
 
     // captured tooltip style from MixinGuiGraphics
-    public static ResourceLocation sTooltipStyle;
+    public static Object sTooltipStyle;
 
     private UIManagerForge() {
         super();
@@ -145,8 +148,7 @@ public final class UIManagerForge extends UIManager implements LifecycleOwner {
             if (minecraft.screen == null ||
                     minecraft.screen.shouldCloseOnEsc() ||
                     minecraft.screen instanceof TitleScreen) {
-                InputConstants.Key key = InputConstants.getKey(keyCode, scanCode);
-                if (OPEN_CENTER_KEY.isActiveAndMatches(key)) {
+                if (OPEN_CENTER_KEY.matches(new KeyEvent(keyCode, scanCode, mods))) {
                     open(new CenterFragment2());
                     return;
                 }
@@ -166,9 +168,9 @@ public final class UIManagerForge extends UIManager implements LifecycleOwner {
     @Override
     public void dump(@NotNull PrintWriter pw, boolean fragments) {
         super.dump(pw, fragments);
-        Map<ResourceLocation, AbstractTexture> textureMap = null;
+        Map<?, AbstractTexture> textureMap = null;
         try {
-            textureMap = (Map<ResourceLocation, AbstractTexture>) BY_PATH.get(minecraft.getTextureManager());
+            textureMap = (Map<?, AbstractTexture>) BY_PATH.get(minecraft.getTextureManager());
         } catch (Exception ignored) {
         }
         if (textureMap != null) {
@@ -204,8 +206,8 @@ public final class UIManagerForge extends UIManager implements LifecycleOwner {
                 }
                 if (texture instanceof TextureAtlas textureAtlas) {
                     try {
-                        Map<ResourceLocation, TextureAtlasSprite> textures =
-                                (Map<ResourceLocation, TextureAtlasSprite>) TEXTURES_BY_NAME.get(textureAtlas);
+                        Map<?, TextureAtlasSprite> textures =
+                                (Map<?, TextureAtlasSprite>) TEXTURES_BY_NAME.get(textureAtlas);
                         for (var sprite : textures.values()) {
                             for (var image : sprite.contents().byMipLevel) {
                                 if (image != null && image.getPointer() != 0) {

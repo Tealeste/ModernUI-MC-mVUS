@@ -20,7 +20,6 @@ package icyllis.modernui.mc.text;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 
@@ -49,7 +48,7 @@ public class VanillaLayoutKey {
      *
      * @see Style#getFont()
      */
-    private ResourceLocation mFont;
+    private Object mFont;
 
     /**
      * A packed field that contains RGB color and appearance-affecting bit flags
@@ -84,7 +83,7 @@ public class VanillaLayoutKey {
      */
     public VanillaLayoutKey update(@Nonnull String text, @Nonnull Style style) {
         mText = text;
-        mFont = style.getFont();
+        mFont = TextLayoutProcessor.resolveFontId(style.getFont());
         mCode = CharacterStyle.flatten(style);
         mHash = 0;
         return this;
