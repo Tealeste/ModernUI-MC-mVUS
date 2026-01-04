@@ -20,11 +20,12 @@ package icyllis.modernui.mc.neoforge;
 
 import icyllis.modernui.mc.ModernUIMod;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredHolder;
+
+import javax.annotation.Nonnull;
 
 @SuppressWarnings("unused")
 public final class MuiRegistries {
@@ -38,16 +39,20 @@ public final class MuiRegistries {
     /**
      * Container Menus (Development only)
      */
-    public static final ResourceLocation
-            TEST_MENU_KEY = ModernUIMod.location("test");
+    @Nonnull
+    public static <T> T testMenuKey() {
+        return ModernUIMod.location("test");
+    }
     public static final DeferredHolder<MenuType<?>, MenuType<TestContainerMenu>> TEST_MENU = DeferredHolder.create(
-            Registries.MENU, TEST_MENU_KEY);
+            Registries.MENU, testMenuKey());
 
     /**
      * Items (Development only)
      */
-    public static final ResourceLocation
-            PROJECT_BUILDER_ITEM_KEY = ModernUIMod.location("project_builder");
+    @Nonnull
+    public static <T> T projectBuilderItemKey() {
+        return ModernUIMod.location("project_builder");
+    }
     public static final DeferredHolder<Item, Item> PROJECT_BUILDER_ITEM = DeferredHolder.create(
-            Registries.ITEM, PROJECT_BUILDER_ITEM_KEY);
+            Registries.ITEM, projectBuilderItemKey());
 }

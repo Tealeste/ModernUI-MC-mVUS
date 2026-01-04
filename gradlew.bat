@@ -67,6 +67,20 @@ goto fail
 :execute
 @rem Setup the command line
 
+@rem ModernUI-MC requires running Gradle with Java 21 (newer JDKs break Groovy/Gradle script compilation).
+for /f "tokens=3 delims=\" " %%v in ('"%JAVA_EXE%" -version 2^>^&1 ^| findstr /i "version"') do set JAVA_VERSION=%%v
+for /f "tokens=1 delims=." %%m in ("%JAVA_VERSION%") do set JAVA_MAJOR=%%m
+if "%JAVA_MAJOR%"=="1" for /f "tokens=2 delims=." %%m in ("%JAVA_VERSION%") do set JAVA_MAJOR=%%m
+if not "%JAVA_MAJOR%"=="" (
+    if %JAVA_MAJOR% GTR 21 (
+        echo.
+        echo ERROR: ModernUI-MC requires running Gradle with Java 21. Detected Java %JAVA_VERSION%.
+        echo.
+        echo Fix: install JDK 21 and re-run with JAVA_HOME pointing to it.
+        goto fail
+    )
+)
+
 set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
 
 

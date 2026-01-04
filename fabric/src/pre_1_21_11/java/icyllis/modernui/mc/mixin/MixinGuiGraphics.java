@@ -1,0 +1,261 @@
+/*
+ * Modern UI.
+ * Copyright (C) 2019-2023 BloCamLimb. All rights reserved.
+ *
+ * Modern UI is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Modern UI is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with Modern UI. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package icyllis.modernui.mc.mixin;
+
+import icyllis.modernui.mc.IModernGuiGraphics;
+import icyllis.modernui.mc.ModernUIMod;
+import icyllis.modernui.mc.TooltipRenderer;
+import icyllis.modernui.mc.UIManager;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
+import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.ItemStack;
+import org.objectweb.asm.Opcodes;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Coerce;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@Mixin(GuiGraphics.class)
+public abstract class MixinGuiGraphics implements IModernGuiGraphics {
+
+    // equivalent to Forge
+    @Unique
+    private ItemStack modernUI_MC$tooltipStack = ItemStack.EMPTY;
+
+    @Unique
+    private ItemStack modernUI_MC$deferredTooltipStack = ItemStack.EMPTY;
+
+    @Shadow
+    public abstract int guiWidth();
+
+    @Shadow
+    public abstract int guiHeight();
+
+    @Unique
+    private static volatile Method modernUI_MC$setTooltipForNextFrameInternal;
+
+    @Unique
+    private static volatile boolean modernUI_MC$loggedSetTooltipForNextFrameInternalFailure;
+
+    @Nullable
+    @Unique
+    private static Method modernUI_MC$getSetTooltipForNextFrameInternal() {
+        Method method = modernUI_MC$setTooltipForNextFrameInternal;
+        if (method != null) {
+            return method;
+        }
+        method = modernUI_MC$resolveSetTooltipForNextFrameInternal();
+        modernUI_MC$setTooltipForNextFrameInternal = method;
+        return method;
+    }
+
+    @Unique
+    private boolean modernUI_MC$invokeSetTooltipForNextFrameInternal(Font font, List<ClientTooltipComponent> components,
+                                                                     int x, int y, ClientTooltipPositioner positioner,
+                                                                     @Nullable Object tooltipStyle, boolean deferred) {
+        Method method = modernUI_MC$getSetTooltipForNextFrameInternal();
+        if (method == null) {
+            return false;
+        }
+        try {
+            method.invoke(this, font, components, x, y, positioner, tooltipStyle, deferred);
+            return true;
+        } catch (Throwable t) {
+            if (!modernUI_MC$loggedSetTooltipForNextFrameInternalFailure) {
+                modernUI_MC$loggedSetTooltipForNextFrameInternalFailure = true;
+                ModernUIMod.LOGGER.warn(ModernUIMod.MARKER,
+                        "Failed to invoke GuiGraphics#setTooltipForNextFrameInternal; falling back to vanilla tooltip rendering.",
+                        t);
+            }
+            return false;
+        }
+    }
+
+    @Unique
+    private static @Nullable Method modernUI_MC$resolveSetTooltipForNextFrameInternal() {
+        for (Method method : GuiGraphics.class.getDeclaredMethods()) {
+            if (method.getReturnType() != void.class) {
+                continue;
+            }
+            Class<?>[] params = method.getParameterTypes();
+            if (params.length != 7) {
+                continue;
+            }
+            if (params[0] != Font.class) {
+                continue;
+            }
+            if (!List.class.isAssignableFrom(params[1])) {
+                continue;
+            }
+            if (params[2] != int.class || params[3] != int.class) {
+                continue;
+            }
+            if (!ClientTooltipPositioner.class.isAssignableFrom(params[4])) {
+                continue;
+            }
+            if (params[6] != boolean.class) {
+                continue;
+            }
+            // params[5] is tooltip style id: can be ResourceLocation/Identifier/intermediary class_2960
+            // depending on mappings/runtime; accept any reference type.
+            if (params[5].isPrimitive()) {
+                continue;
+            }
+
+            // In production Fabric, method names are obfuscated (method_*) so do not match by name.
+            // In dev, a name match would work but signature match is stable across mappings.
+            try {
+                if (!method.trySetAccessible()) {
+                    continue;
+                }
+            } catch (Throwable ignored) {
+                continue;
+            }
+            return method;
+        }
+        return null;
+    }
+
+    @Inject(method = "setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;II)V",
+            at = @At("HEAD"))
+    private void preRenderTooltip(Font font, ItemStack stack, int x, int y, CallbackInfo ci) {
+        modernUI_MC$tooltipStack = stack;
+    }
+
+    @Inject(method = "setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;II)V",
+            at = @At("TAIL"))
+    private void postRenderTooltip(Font font, ItemStack stack, int x, int y, CallbackInfo ci) {
+        modernUI_MC$tooltipStack = ItemStack.EMPTY;
+    }
+
+    @Inject(method = {
+            "setTooltipForNextFrame(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;" +
+                    "IILnet/minecraft/resources/ResourceLocation;)V",
+    },
+            at = @At("HEAD"), cancellable = true)
+    private void onRenderTooltip(Font font, List<Component> components, Optional<TooltipComponent> tooltipComponent,
+                                 int x, int y, @Nullable @Coerce Object tooltipStyle, CallbackInfo ci) {
+        if (TooltipRenderer.sTooltip && TooltipRenderer.sLineWrapping_FabricOnly) {
+            if (!components.isEmpty()) {
+                var transformedComponents = modernUI_MC$transformComponents(
+                        font, components, tooltipComponent, x
+                );
+                if (modernUI_MC$invokeSetTooltipForNextFrameInternal(font, transformedComponents,
+                        x, y, DefaultTooltipPositioner.INSTANCE, tooltipStyle, false)) {
+                    ci.cancel();
+                }
+            }
+        }
+    }
+
+    // equivalent to Forge
+    @Unique
+    private List<ClientTooltipComponent> modernUI_MC$transformComponents(
+            Font font, List<Component> components, Optional<TooltipComponent> tooltipComponent,
+            int x) {
+        List<ClientTooltipComponent> result = new ArrayList<>(components.size() + 1);
+
+        int screenWidth = guiWidth();
+        int tooltipWidth = 0;
+        int[] widths = new int[components.size()];
+        for (int i = 0; i < components.size(); i++) {
+            widths[i] = font.width(components.get(i));
+            tooltipWidth = Math.max(tooltipWidth, widths[i]);
+        }
+
+        int tooltipX = x + TooltipRenderer.TOOLTIP_SPACE;
+        if (tooltipX + tooltipWidth + TooltipRenderer.H_BORDER > screenWidth) {
+            tooltipX = x - TooltipRenderer.TOOLTIP_SPACE - TooltipRenderer.H_BORDER - tooltipWidth;
+            if (tooltipX < TooltipRenderer.H_BORDER) {
+                if (x > screenWidth / 2)
+                    tooltipWidth = x - TooltipRenderer.TOOLTIP_SPACE - TooltipRenderer.H_BORDER * 2;
+                else
+                    tooltipWidth = screenWidth - TooltipRenderer.TOOLTIP_SPACE - TooltipRenderer.H_BORDER - x;
+            }
+        }
+
+        for (int i = 0; i < components.size(); i++) {
+            var component = components.get(i);
+            if (widths[i] > tooltipWidth) {
+                for (var line : font.split(component, tooltipWidth)) {
+                    result.add(ClientTooltipComponent.create(line));
+                }
+            } else {
+                result.add(ClientTooltipComponent.create(component.getVisualOrderText()));
+            }
+            if (i == 0 && tooltipComponent.isPresent()) {
+                result.add(ClientTooltipComponent.create(tooltipComponent.get()));
+            }
+        }
+
+        return result;
+    }
+
+    @Inject(method = "setTooltipForNextFrameInternal",
+            at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/GuiGraphics;" +
+                    "deferredTooltip:Ljava/lang/Runnable;",
+                    opcode = Opcodes.PUTFIELD))
+    private void onRenderTooltipInternal(Font arg, List<ClientTooltipComponent> list, int m, int n,
+                                         ClientTooltipPositioner arg2,
+                                         @Nullable @Coerce Object arg3, boolean bl, CallbackInfo ci) {
+        modernUI_MC$deferredTooltipStack = modernUI_MC$tooltipStack;
+    }
+
+    @Inject(method = {
+            "renderTooltip(Lnet/minecraft/client/gui/Font;Ljava/util/List;IILnet/minecraft/client/gui/screens/inventory/tooltip/ClientTooltipPositioner;" +
+                    "Lnet/minecraft/resources/ResourceLocation;)V",
+    }, at = @At("HEAD"), cancellable = true)
+    private void onRenderTooltip(Font font, List<ClientTooltipComponent> components,
+                                 int x, int y, ClientTooltipPositioner positioner,
+                                 @Nullable @Coerce Object tooltipStyle,
+                                 CallbackInfo ci) {
+        ItemStack capturedTooltipStack = modernUI_MC$deferredTooltipStack;
+        modernUI_MC$deferredTooltipStack = ItemStack.EMPTY;
+        if (TooltipRenderer.sTooltip) {
+            if (!components.isEmpty()) {
+                UIManager.getInstance().drawExtTooltip(capturedTooltipStack,
+                        (GuiGraphics) (Object) this,
+                        components, x, y, font,
+                        guiWidth(), guiHeight(), positioner, tooltipStyle);
+                ci.cancel();
+            }
+        }
+    }
+
+    @Override
+    public void modernUI_MC$setTooltipStack(@Nonnull ItemStack stack) {
+        modernUI_MC$tooltipStack = stack;
+    }
+}
+

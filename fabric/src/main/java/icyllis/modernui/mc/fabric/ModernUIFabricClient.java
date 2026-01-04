@@ -45,7 +45,6 @@ import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.resources.language.LanguageManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
@@ -92,23 +91,15 @@ public class ModernUIFabricClient extends ModernUIClient implements ClientModIni
 
         KeyBindingHelper.registerKeyBinding(UIManagerFabric.OPEN_CENTER_KEY);
 
-        ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new SimpleSynchronousResourceReloadListener() {
-            @Override
-            public ResourceLocation getFabricId() {
-                return ModernUIMod.location("client");
+        FabricReloadListenerCompat.registerSimpleClientReloadListener("client", resourceManager -> {
+            ImageStore.getInstance().clear();
+            Handler handler = Core.getUiHandlerAsync();
+            // FML may throw ex, so it can be null
+            if (handler != null) {
+                // Call in lambda, not in creating the lambda
+                handler.post(() -> UIManager.getInstance().updateLayoutDir(ConfigImpl.CLIENT.mForceRtl.get()));
             }
-
-            @Override
-            public void onResourceManagerReload(@Nonnull ResourceManager resourceManager) {
-                ImageStore.getInstance().clear();
-                Handler handler = Core.getUiHandlerAsync();
-                // FML may throw ex, so it can be null
-                if (handler != null) {
-                    // Call in lambda, not in creating the lambda
-                    handler.post(() -> UIManager.getInstance().updateLayoutDir(ConfigImpl.CLIENT.mForceRtl.get()));
-                }
-                //BlurHandler.INSTANCE.loadEffect();
-            }
+            //BlurHandler.INSTANCE.loadEffect();
         });
 
         /*CoreShaderRegistrationCallback.EVENT.register(context -> {
@@ -201,26 +192,15 @@ public class ModernUIFabricClient extends ModernUIClient implements ClientModIni
             LOGGER.info(MARKER, "Initialized Modern UI text engine");
         } else {
             // see MixinFontManager in another case
-            ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new IdentifiableResourceReloadListener() {
-                @Override
-                public ResourceLocation getFabricId() {
-                    return ModernUIMod.location("font");
-                }
-
-                @Nonnull
-                @Override
-                public CompletableFuture<Void> reload(@Nonnull PreparationBarrier preparationBarrier,
-                                                      @Nonnull ResourceManager resourceManager,
-                                                      @Nonnull Executor preparationExecutor,
-                                                      @Nonnull Executor reloadExecutor) {
-                    return FontResourceManager.getInstance().reload(
-                            preparationBarrier,
-                            resourceManager,
-                            preparationExecutor,
-                            reloadExecutor
-                    );
-                }
-            });
+            FabricReloadListenerCompat.registerIdentifiableClientReloadListener("font",
+                    (sharedState, preparationExecutor, preparationBarrier, reloadExecutor) ->
+                            FontResourceManager.getInstance().reload(
+                                    sharedState,
+                                    preparationExecutor,
+                                    preparationBarrier,
+                                    reloadExecutor
+                            )
+            );
         }
         LOGGER.info(MARKER, "Initialized Modern UI client");
     }

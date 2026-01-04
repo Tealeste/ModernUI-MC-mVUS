@@ -422,6 +422,11 @@ public class TextLayout {
                     ascent = bitmapFont.getAscent();
                     scaleFactor = 1f / TextLayoutEngine.BITMAP_SCALE;
                     isBitmapFont = true;
+                } else if (getFont(i) instanceof AtlasSpriteFont atlasSpriteFont) {
+                    texture = atlasSpriteFont.getTextureView();
+                    ascent = -glyph.y / TextLayoutEngine.BITMAP_SCALE;
+                    scaleFactor = 1f / TextLayoutEngine.BITMAP_SCALE;
+                    isBitmapFont = true;
                 } else {
                     if (isShadow) {
                         continue;
@@ -661,6 +666,20 @@ public class TextLayout {
                                                      final int color, final boolean dropShadow,
                                                      int preferredMode, final float uniformScale,
                                                      final int bgColor) {
+        return prepareTextWithDensity(null, null, false, x, top, color, dropShadow,
+                preferredMode, uniformScale, bgColor, /*stripPoseTranslation*/ false);
+    }
+
+    /**
+     * Special version for GUI text rendering that preserves style for hover/click hit-testing.
+     */
+    public ModernPreparedText prepareTextWithDensity(@Nullable net.minecraft.client.gui.Font font,
+                                                     @Nullable net.minecraft.util.FormattedCharSequence text,
+                                                     boolean includeEmpty,
+                                                     float x, float top,
+                                                     final int color, final boolean dropShadow,
+                                                     int preferredMode, final float uniformScale,
+                                                     final int bgColor, boolean stripPoseTranslation) {
         final float density;
         final GLBakedGlyph[] glyphs;
         if (preferredMode == TextRenderType.MODE_SDF_FILL) {
@@ -680,8 +699,11 @@ public class TextLayout {
             density = mCreatedResLevel;
         }
 
-        return new ModernPreparedText(x, top, color, dropShadow, preferredMode, bgColor, density, glyphs,
-                this);
+        return new ModernPreparedText(font, text, includeEmpty,
+                stripPoseTranslation,
+                x, top, color, dropShadow,
+                preferredMode, bgColor, density,
+                glyphs, this);
     }
 
     /**

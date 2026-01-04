@@ -20,8 +20,6 @@ package icyllis.modernui.mc.text.mixin;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.systems.RenderPass;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import icyllis.modernui.mc.text.ModernPreparedText;
 import icyllis.modernui.mc.text.TextRenderType;
@@ -53,45 +51,13 @@ public class MixinGuiRenderer {
     @Overwrite
     private void prepareText() {
         renderState.forEachText(guiTextRenderState -> {
-            Matrix3x2f pose = guiTextRenderState.pose;
+            var pose = guiTextRenderState.pose;
             ScreenRectangle scissor = guiTextRenderState.scissor;
             ModernPreparedText preparedText = (ModernPreparedText) guiTextRenderState.ensurePrepared();
             preparedText.submitRuns(renderState, pose, scissor);
         });
     }
 
-    // setup bilinear sampler for SDF text
-
-    @Unique
-    private FilterMode modernUI_MC$oldMinFilter;
-    @Unique
-    private FilterMode modernUI_MC$oldMagFilter;
-    @Unique
-    private boolean modernUI_MC$oldUseMipmaps;
-
-    @Inject(method = "executeDraw", at = @At("HEAD"))
-    private void beforeExecuteDraw(@Coerce Object $$0, RenderPass $$1, GpuBuffer $$2, VertexFormat.IndexType $$3, CallbackInfo ci) {
-        AccessGuiRendererDraw draw = (AccessGuiRendererDraw) $$0;
-        if (draw.pipeline() == TextRenderType.getPipelineSDFFill()) {
-            @SuppressWarnings("resource") GpuTextureView ptrTexView = draw.textureSetup().texure0();
-            assert ptrTexView != null;
-            AccessGpuTexture tex = (AccessGpuTexture) ptrTexView.texture();
-            modernUI_MC$oldMinFilter = tex.getMinFilter();
-            modernUI_MC$oldMagFilter = tex.getMagFilter();
-            modernUI_MC$oldUseMipmaps = tex.getUseMipmaps();
-            ptrTexView.texture().setTextureFilter(FilterMode.LINEAR, FilterMode.LINEAR, true);
-        }
-    }
-
-    @Inject(method = "executeDraw", at = @At("TAIL"))
-    private void afterExecuteDraw(@Coerce Object $$0, RenderPass $$1, GpuBuffer $$2, VertexFormat.IndexType $$3, CallbackInfo ci) {
-        if (modernUI_MC$oldMinFilter != null) {
-            AccessGuiRendererDraw draw = (AccessGuiRendererDraw) $$0;
-            @SuppressWarnings("resource") GpuTextureView ptrTexView = draw.textureSetup().texure0();
-            assert ptrTexView != null;
-            ptrTexView.texture().setTextureFilter(modernUI_MC$oldMinFilter, modernUI_MC$oldMagFilter, modernUI_MC$oldUseMipmaps);
-            modernUI_MC$oldMinFilter = null;
-            modernUI_MC$oldMagFilter = null;
-        }
-    }
+    // Filtering is now controlled via per-draw samplers (TextureSetup/RenderSetup),
+    // so we don't mutate GpuTexture filtering state here anymore.
 }

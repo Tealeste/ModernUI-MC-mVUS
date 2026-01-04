@@ -20,18 +20,25 @@ package icyllis.modernui.mc.forge;
 
 import icyllis.modernui.ModernUI;
 import icyllis.modernui.core.Core;
+import icyllis.modernui.core.Handler;
+import icyllis.modernui.graphics.ImageStore;
 import icyllis.modernui.mc.ModernUIMod;
+import icyllis.modernui.mc.FontResourceManager;
+import icyllis.modernui.mc.UIManager;
 import icyllis.modernui.mc.StillAlive;
 import icyllis.modernui.mc.testforge.TestContainerMenu;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
@@ -39,6 +46,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 
 import javax.annotation.Nonnull;
+
+import static icyllis.modernui.mc.ModernUIMod.*;
 
 /**
  * Handles game server or client events from Forge event bus
@@ -145,7 +154,30 @@ final class EventHandler {
         }*/
 
         @SubscribeEvent
-        static void onRenderTick(@Nonnull TickEvent.RenderTickEvent event) {
+        static void registerKeyMapping(@Nonnull RegisterKeyMappingsEvent event) {
+            event.register(UIManagerForge.OPEN_CENTER_KEY);
+            event.register(UIManagerForge.ZOOM_KEY);
+        }
+
+        @SubscribeEvent
+        static void registerResourceListener(@Nonnull RegisterClientReloadListenersEvent event) {
+            event.registerReloadListener((ResourceManagerReloadListener) manager -> {
+                ImageStore.getInstance().clear();
+                Handler handler = Core.getUiHandlerAsync();
+                // FML may throw ex, so it can be null
+                if (handler != null) {
+                    handler.post(() -> UIManager.getInstance().updateLayoutDir(ConfigImpl.CLIENT.mForceRtl.get()));
+                }
+            });
+            if (!ModernUIMod.isTextEngineEnabled()) {
+                event.registerReloadListener(FontResourceManager.getInstance());
+            }
+
+            LOGGER.debug(MARKER, "Registered resource reload listener");
+        }
+
+        @SubscribeEvent
+        static void onRenderTick(@Nonnull TickEvent.RenderTickEvent.Post event) {
             Core.flushMainCalls();
             StillAlive.tick();
         }

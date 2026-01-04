@@ -23,6 +23,8 @@ import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.util.Mth;
 import net.minecraft.util.FormattedCharSequence;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.*;
@@ -113,5 +115,44 @@ public abstract class MixinFontRenderer {
     public void drawInBatch8xOutline(@Nonnull FormattedCharSequence text, float x, float y, int color, int outlineColor,
                                      @Nonnull Matrix4f matrix, @Nonnull MultiBufferSource source, int packedLight) {
         modernUI_MC$textRenderer.drawText8xOutline(text, x, y, color, outlineColor, matrix, source, packedLight);
+    }
+
+    /**
+     * Ensure width measurement matches ModernUI rendering even if a mod replaces {@link Font}'s internal splitter
+     * (e.g. Jade's {@code JadeFont}). This prevents scissor-clipped overlays from hiding text due to incorrect widths.
+     *
+     * @author BloCamLimb
+     * @reason Modern Text Engine
+     */
+    @Overwrite
+    public int width(String text) {
+        if (text == null || text.isEmpty()) {
+            return 0;
+        }
+        return Mth.ceil(TextLayoutEngine.getInstance().lookupVanillaLayout(text).getTotalAdvance());
+    }
+
+    /**
+     * @author BloCamLimb
+     * @reason Modern Text Engine
+     */
+    @Overwrite
+    public int width(FormattedText text) {
+        if (text == null || text == net.minecraft.network.chat.CommonComponents.EMPTY || text == FormattedText.EMPTY) {
+            return 0;
+        }
+        return Mth.ceil(TextLayoutEngine.getInstance().lookupFormattedLayout(text).getTotalAdvance());
+    }
+
+    /**
+     * @author BloCamLimb
+     * @reason Modern Text Engine
+     */
+    @Overwrite
+    public int width(FormattedCharSequence text) {
+        if (text == null || text == FormattedCharSequence.EMPTY) {
+            return 0;
+        }
+        return Mth.ceil(TextLayoutEngine.getInstance().lookupFormattedLayout(text).getTotalAdvance());
     }
 }

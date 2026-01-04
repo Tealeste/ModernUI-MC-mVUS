@@ -27,10 +27,10 @@ import icyllis.modernui.mc.*;
 import icyllis.modernui.mc.ui.CenterFragment2;
 import icyllis.modernui.text.TextUtils;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.renderer.texture.*;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.event.*;
 import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.client.settings.KeyModifier;
@@ -57,14 +57,92 @@ import static org.lwjgl.glfw.GLFW.*;
 @ApiStatus.Internal
 public final class UIManagerForge extends UIManager implements LifecycleOwner {
 
+    private static final KeyMapping.Category MODERN_UI_CATEGORY =
+            KeyMapping.Category.register(ModernUIMod.location("modern_ui"));
+
     @SuppressWarnings("NoTranslation")
-    public static final KeyMapping OPEN_CENTER_KEY = new KeyMapping(
-            "key.modernui.openCenter", KeyConflictContext.UNIVERSAL, KeyModifier.CONTROL,
-            InputConstants.Type.KEYSYM, GLFW_KEY_K, "Modern UI");
+    public static final KeyMapping OPEN_CENTER_KEY = createKeyMapping(
+            "key.modernui.openCenter",
+            KeyConflictContext.UNIVERSAL,
+            KeyModifier.CONTROL,
+            InputConstants.Type.KEYSYM,
+            GLFW_KEY_K,
+            MODERN_UI_CATEGORY
+    );
     @SuppressWarnings("NoTranslation")
-    public static final KeyMapping ZOOM_KEY = new KeyMapping(
-            "key.modernui.zoom", KeyConflictContext.IN_GAME, KeyModifier.NONE,
-            InputConstants.Type.KEYSYM, GLFW_KEY_C, "Modern UI");
+    public static final KeyMapping ZOOM_KEY = createKeyMapping(
+            "key.modernui.zoom",
+            KeyConflictContext.IN_GAME,
+            KeyModifier.NONE,
+            InputConstants.Type.KEYSYM,
+            GLFW_KEY_C,
+            MODERN_UI_CATEGORY
+    );
+
+    private static KeyMapping createKeyMapping(String translationKey,
+                                               KeyConflictContext conflictContext,
+                                               KeyModifier keyModifier,
+                                               InputConstants.Type type,
+                                               int keyCode,
+                                               KeyMapping.Category category) {
+        for (var ctor : KeyMapping.class.getConstructors()) {
+            Class<?>[] p = ctor.getParameterTypes();
+            if (p.length < 6 || p[0] != String.class || !p[1].isInstance(conflictContext)) {
+                continue;
+            }
+            try {
+                if (p.length == 6 &&
+                        p[2] == KeyModifier.class &&
+                        p[3] == InputConstants.Type.class &&
+                        p[4] == int.class &&
+                        p[5] == KeyMapping.Category.class) {
+                    return (KeyMapping) ctor.newInstance(
+                            translationKey,
+                            conflictContext,
+                            keyModifier,
+                            type,
+                            keyCode,
+                            category
+                    );
+                }
+
+                if (p.length == 7 &&
+                        p[2] == KeyModifier.class &&
+                        p[3] == InputConstants.Type.class &&
+                        p[4] == int.class &&
+                        p[5] == KeyMapping.Category.class &&
+                        p[6] == int.class) {
+                    return (KeyMapping) ctor.newInstance(
+                            translationKey,
+                            conflictContext,
+                            keyModifier,
+                            type,
+                            keyCode,
+                            category,
+                            /*order*/ 0
+                    );
+                }
+
+                if (p.length == 6 &&
+                        p[2] == KeyModifier.class &&
+                        p[3] == InputConstants.Key.class &&
+                        p[4] == KeyMapping.Category.class &&
+                        p[5] == int.class) {
+                    return (KeyMapping) ctor.newInstance(
+                            translationKey,
+                            conflictContext,
+                            keyModifier,
+                            KeyCompat.getKey(keyCode, /*scanCode*/ 0),
+                            category,
+                            /*order*/ 0
+                    );
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to construct KeyMapping", e);
+            }
+        }
+        throw new IllegalStateException("No compatible KeyMapping constructor found");
+    }
 
     /*public static final Method SEND_TO_CHAT =
             ObfuscationReflectionHelper.findMethod(ChatComponent.class, "m_93790_",
@@ -81,7 +159,7 @@ public final class UIManagerForge extends UIManager implements LifecycleOwner {
             ObfuscationReflectionHelper.findField(AbstractTexture.class, "f_117950_");*/
 
     // captured tooltip style from MixinGuiGraphics
-    public static ResourceLocation sTooltipStyle;
+    public static Object sTooltipStyle;
 
     private UIManagerForge() {
         super();
@@ -143,8 +221,7 @@ public final class UIManagerForge extends UIManager implements LifecycleOwner {
             if (minecraft.screen == null ||
                     minecraft.screen.shouldCloseOnEsc() ||
                     minecraft.screen instanceof TitleScreen) {
-                InputConstants.Key key = InputConstants.getKey(keyCode, scanCode);
-                if (OPEN_CENTER_KEY.isActiveAndMatches(key)) {
+                if (OPEN_CENTER_KEY.matches(new KeyEvent(keyCode, scanCode, mods))) {
                     open(new CenterFragment2());
                     return;
                 }
@@ -164,9 +241,9 @@ public final class UIManagerForge extends UIManager implements LifecycleOwner {
     @Override
     public void dump(@NotNull PrintWriter pw, boolean fragments) {
         super.dump(pw, fragments);
-        Map<ResourceLocation, AbstractTexture> textureMap = null;
+        Map<?, AbstractTexture> textureMap = null;
         try {
-            textureMap = (Map<ResourceLocation, AbstractTexture>) BY_PATH.get(minecraft.getTextureManager());
+            textureMap = (Map<?, AbstractTexture>) BY_PATH.get(minecraft.getTextureManager());
         } catch (Exception ignored) {
         }
         if (textureMap != null) {
@@ -202,8 +279,8 @@ public final class UIManagerForge extends UIManager implements LifecycleOwner {
                 }
                 if (texture instanceof TextureAtlas textureAtlas) {
                     try {
-                        Map<ResourceLocation, TextureAtlasSprite> textures =
-                                (Map<ResourceLocation, TextureAtlasSprite>) TEXTURES_BY_NAME.get(textureAtlas);
+                        Map<?, TextureAtlasSprite> textures =
+                                (Map<?, TextureAtlasSprite>) TEXTURES_BY_NAME.get(textureAtlas);
                         for (var sprite : textures.values()) {
                             for (var image : sprite.contents().byMipLevel) {
                                 if (image != null && image.getPointer() != 0) {

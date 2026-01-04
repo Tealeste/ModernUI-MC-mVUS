@@ -26,7 +26,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.FormattedCharSink;
 
@@ -143,7 +142,7 @@ public class FormattedLayoutKey {
     public static class Lookup extends FormattedLayoutKey {
 
         private final ObjectArrayList<CharSequence> mTexts = new ObjectArrayList<>();
-        private final ObjectArrayList<ResourceLocation> mFonts = new ObjectArrayList<>();
+        private final ObjectArrayList<Object> mFonts = new ObjectArrayList<>();
         private final IntArrayList mCodes = new IntArrayList();
 
         private final ContentBuilder mContentBuilder = new ContentBuilder();
@@ -157,7 +156,7 @@ public class FormattedLayoutKey {
             @Override
             public Optional<Object> accept(@Nonnull Style style, @Nonnull String content) {
                 mTexts.add(content);
-                mFonts.add(style.getFont());
+                mFonts.add(TextLayoutProcessor.resolveFontId(style.getFont()));
                 mCodes.add(CharacterStyle.flatten(style));
                 return Optional.empty(); // continue
             }
@@ -195,7 +194,7 @@ public class FormattedLayoutKey {
                     // there's a style transition, break here and append last component
                     if (!mBuilder.isEmpty()) {
                         mTexts.add(mBuilder);
-                        mFonts.add(mStyle.getFont());
+                        mFonts.add(TextLayoutProcessor.resolveFontId(mStyle.getFont()));
                         mCodes.add(CharacterStyle.flatten(mStyle));
                         allocate();
                     }
@@ -209,7 +208,7 @@ public class FormattedLayoutKey {
                 // append last component
                 if (mBuilder != null && !mBuilder.isEmpty()) {
                     mTexts.add(mBuilder);
-                    mFonts.add(mStyle.getFont());
+                    mFonts.add(TextLayoutProcessor.resolveFontId(mStyle.getFont()));
                     mCodes.add(CharacterStyle.flatten(mStyle));
                 }
                 // we later make copies to generate a Key, so we can release these builders

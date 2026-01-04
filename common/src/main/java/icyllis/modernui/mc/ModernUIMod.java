@@ -19,7 +19,6 @@
 package icyllis.modernui.mc;
 
 import icyllis.modernui.ModernUI;
-import net.minecraft.resources.ResourceLocation;
 import org.apache.logging.log4j.*;
 
 import javax.annotation.Nonnull;
@@ -68,8 +67,13 @@ public abstract class ModernUIMod {
     }
 
     @Nonnull
-    public static ResourceLocation location(String path) {
-        return ResourceLocation.fromNamespaceAndPath(ModernUI.ID, path);
+    public static <T> T location(String path) {
+        return ResourceIdCompat.fromNamespaceAndPath(ModernUI.ID, path);
+    }
+
+    @Nonnull
+    public static String locationString(String path) {
+        return ModernUI.ID + ":" + path;
     }
 
     public static boolean isOptiFineLoaded() {

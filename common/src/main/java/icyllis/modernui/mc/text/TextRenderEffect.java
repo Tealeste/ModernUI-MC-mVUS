@@ -82,19 +82,19 @@ public class TextRenderEffect {
                                      float start, float end, float baseline, float z,
                                      int r, int g, int b, int a) {
         baseline += UNDERLINE_OFFSET;
-        builder.addVertexWith2DPose(pose, start, baseline + UNDERLINE_THICKNESS, z)
+        builder.addVertexWith2DPose(pose, start, baseline + UNDERLINE_THICKNESS)
                 .setColor(r, g, b, a)
                 .setUv(0, 1)
                 .setLight(LightTexture.FULL_BRIGHT);
-        builder.addVertexWith2DPose(pose, end, baseline + UNDERLINE_THICKNESS, z)
+        builder.addVertexWith2DPose(pose, end, baseline + UNDERLINE_THICKNESS)
                 .setColor(r, g, b, a)
                 .setUv(1, 1)
                 .setLight(LightTexture.FULL_BRIGHT);
-        builder.addVertexWith2DPose(pose, end, baseline, z)
+        builder.addVertexWith2DPose(pose, end, baseline)
                 .setColor(r, g, b, a)
                 .setUv(1, 0)
                 .setLight(LightTexture.FULL_BRIGHT);
-        builder.addVertexWith2DPose(pose, start, baseline, z)
+        builder.addVertexWith2DPose(pose, start, baseline)
                 .setColor(r, g, b, a)
                 .setUv(0, 0)
                 .setLight(LightTexture.FULL_BRIGHT);
@@ -126,19 +126,19 @@ public class TextRenderEffect {
                                          float start, float end, float baseline, float z,
                                          int r, int g, int b, int a) {
         baseline += STRIKETHROUGH_OFFSET;
-        builder.addVertexWith2DPose(pose, start, baseline + STRIKETHROUGH_THICKNESS, z)
+        builder.addVertexWith2DPose(pose, start, baseline + STRIKETHROUGH_THICKNESS)
                 .setColor(r, g, b, a)
                 .setUv(0, 1)
                 .setLight(LightTexture.FULL_BRIGHT);
-        builder.addVertexWith2DPose(pose, end, baseline + STRIKETHROUGH_THICKNESS, z)
+        builder.addVertexWith2DPose(pose, end, baseline + STRIKETHROUGH_THICKNESS)
                 .setColor(r, g, b, a)
                 .setUv(1, 1)
                 .setLight(LightTexture.FULL_BRIGHT);
-        builder.addVertexWith2DPose(pose, end, baseline, z)
+        builder.addVertexWith2DPose(pose, end, baseline)
                 .setColor(r, g, b, a)
                 .setUv(1, 0)
                 .setLight(LightTexture.FULL_BRIGHT);
-        builder.addVertexWith2DPose(pose, start, baseline, z)
+        builder.addVertexWith2DPose(pose, start, baseline)
                 .setColor(r, g, b, a)
                 .setUv(0, 0)
                 .setLight(LightTexture.FULL_BRIGHT);

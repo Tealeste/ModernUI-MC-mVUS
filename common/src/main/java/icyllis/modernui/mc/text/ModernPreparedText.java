@@ -21,13 +21,17 @@ package icyllis.modernui.mc.text;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import icyllis.arc3d.core.Rect2f;
+import icyllis.modernui.mc.FontCompat;
 import icyllis.modernui.mc.GradientRectangleRenderState;
+import icyllis.modernui.mc.TextureSetupCompat;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.gui.render.state.GuiRenderState;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.util.FormattedCharSequence;
 import org.joml.Matrix3x2f;
+import org.joml.Matrix3x2fc;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -45,6 +49,19 @@ public class ModernPreparedText implements Font.PreparedText {
             new ArrayList<>(), false, 0,
             null, null, null
     );
+
+    @Nullable
+    private final Font sourceFont;
+
+    @Nullable
+    private final FormattedCharSequence sourceText;
+
+    private final boolean includeEmpty;
+
+    @Nullable
+    private Font.PreparedText fallbackPreparedText;
+
+    private final boolean stripPoseTranslation;
 
     private final float density;
     private final float shadowOffset;
@@ -65,6 +82,26 @@ public class ModernPreparedText implements Font.PreparedText {
                        int bgColor, float x, float top, ScreenRectangle bounds,
                        ArrayList<TextRun> runs, boolean hasEffect, float totalAdvance,
                        GLBakedGlyph[] glyphs, float[] positions, int[] flags) {
+        this(null, null, false,
+                /*stripPoseTranslation*/ false,
+                density, shadowOffset, dropShadow, color,
+                bgColor, x, top, bounds,
+                runs, hasEffect, totalAdvance,
+                glyphs, positions, flags);
+    }
+
+    ModernPreparedText(@Nullable Font sourceFont,
+                       @Nullable FormattedCharSequence sourceText,
+                       boolean includeEmpty,
+                       boolean stripPoseTranslation,
+                       float density, float shadowOffset, boolean dropShadow, int color,
+                       int bgColor, float x, float top, ScreenRectangle bounds,
+                       ArrayList<TextRun> runs, boolean hasEffect, float totalAdvance,
+                       GLBakedGlyph[] glyphs, float[] positions, int[] flags) {
+        this.sourceFont = sourceFont;
+        this.sourceText = sourceText;
+        this.includeEmpty = includeEmpty;
+        this.stripPoseTranslation = stripPoseTranslation;
         this.density = density;
         this.shadowOffset = shadowOffset;
         this.dropShadow = dropShadow;
@@ -84,6 +121,25 @@ public class ModernPreparedText implements Font.PreparedText {
     ModernPreparedText(float x, float top, int color, boolean dropShadow,
                        int preferredMode, int bgColor, float density,
                        GLBakedGlyph[] glyphs, TextLayout layout) {
+        this(null, null, false,
+                /*stripPoseTranslation*/ false,
+                x, top, color, dropShadow,
+                preferredMode, bgColor, density,
+                glyphs, layout);
+    }
+
+    ModernPreparedText(@Nullable Font sourceFont,
+                       @Nullable FormattedCharSequence sourceText,
+                       boolean includeEmpty,
+                       boolean stripPoseTranslation,
+                       float x, float top, int color, boolean dropShadow,
+                       int preferredMode, int bgColor, float density,
+                       GLBakedGlyph[] glyphs, TextLayout layout) {
+
+        this.sourceFont = sourceFont;
+        this.sourceText = sourceText;
+        this.includeEmpty = includeEmpty;
+        this.stripPoseTranslation = stripPoseTranslation;
 
         final float invDensity = 1.0f / density;
         float shadowOffset = 0;
@@ -152,6 +208,11 @@ public class ModernPreparedText implements Font.PreparedText {
                     ascent = -glyph.y / TextLayoutEngine.BITMAP_SCALE;
                     scaleFactor = 1f / TextLayoutEngine.BITMAP_SCALE;
                     isBitmapFont = true;
+                } else if (layout.getFont(i) instanceof AtlasSpriteFont atlasSpriteFont) {
+                    texture = atlasSpriteFont.getTextureView();
+                    ascent = -glyph.y / TextLayoutEngine.BITMAP_SCALE;
+                    scaleFactor = 1f / TextLayoutEngine.BITMAP_SCALE;
+                    isBitmapFont = true;
                 } else {
                     texture = GlyphManager.getInstance().getEmojiTexture();
                     ascent = TextLayout.STANDARD_BASELINE_OFFSET;
@@ -185,7 +246,7 @@ public class ModernPreparedText implements Font.PreparedText {
                 if (!textRuns.isEmpty()) {
                     textRuns.getLast().glyphEnd = i;
                 }
-                textRuns.add(new TextRun(pipeline, texture, i, isColorEmoji,
+                textRuns.add(new TextRun(pipeline, texture, TextRenderType.getSamplerForGui(mode), i, isColorEmoji,
                         preferredMode == TextRenderType.MODE_NORMAL));
             }
             float upSkew = 0;
@@ -235,7 +296,15 @@ public class ModernPreparedText implements Font.PreparedText {
 
     @Override
     public void visit(@Nonnull Font.GlyphVisitor glyphVisitor) {
-        throw new UnsupportedOperationException("Modern Text Engine");
+        if (sourceFont == null || sourceText == null) {
+            return;
+        }
+        Font.PreparedText preparedText = fallbackPreparedText;
+        if (preparedText == null) {
+            preparedText = FontCompat.prepareText(sourceFont, sourceText, x, top, color, dropShadow, includeEmpty, bgColor);
+            fallbackPreparedText = preparedText;
+        }
+        preparedText.visit(glyphVisitor);
     }
 
     @Nullable
@@ -244,16 +313,28 @@ public class ModernPreparedText implements Font.PreparedText {
         return bounds;
     }
 
+    public boolean isStripPoseTranslation() {
+        return stripPoseTranslation;
+    }
+
     @SuppressWarnings("ForLoopReplaceableByForEach")
-    public void submitRuns(GuiRenderState renderState, Matrix3x2f pose,
+    public void submitRuns(GuiRenderState renderState, Matrix3x2fc pose,
                            @Nullable ScreenRectangle scissor) {
+        Matrix3x2f pose2d;
+        if (stripPoseTranslation) {
+            pose2d = new Matrix3x2f(pose);
+            pose2d.m20 = 0;
+            pose2d.m21 = 0;
+        } else {
+            pose2d = pose instanceof Matrix3x2f m ? m : new Matrix3x2f(pose);
+        }
         if ((bgColor & 0xFF000000) != 0) {
             // this is only used by CartographyTableScreen, emit as normal fills
             renderState.submitGlyphToCurrentLayer(
                     new GradientRectangleRenderState(
                             RenderPipelines.GUI,
                             TextureSetup.noTexture(),
-                            pose,
+                            pose2d,
                             x - 1, top - 1,
                             x + totalAdvance + 1, top + 9,
                             bgColor, bgColor, bgColor, bgColor,
@@ -265,8 +346,8 @@ public class ModernPreparedText implements Font.PreparedText {
         for (int i = 0; i < runs.size(); i++) {
             var run = runs.get(i);
             renderState.submitGlyphToCurrentLayer(
-                    new TextRunRenderState(pose, run.pipeline,
-                            TextureSetup.singleTextureWithLightmap(run.textureView),
+                    new TextRunRenderState(pose2d, run.pipeline,
+                            TextureSetupCompat.singleTextureWithLightmap(run.textureView, run.sampler),
                             scissor,
                             x, top, color, dropShadow,
                             glyphs, positions, flags,
@@ -277,7 +358,7 @@ public class ModernPreparedText implements Font.PreparedText {
         }
         if (hasEffect) {
             renderState.submitGlyphToCurrentLayer(
-                    new TextEffectRenderState(pose,
+                    new TextEffectRenderState(pose2d,
                             scissor,
                             x, top, color, dropShadow,
                             positions, flags,
@@ -293,15 +374,17 @@ public class ModernPreparedText implements Font.PreparedText {
 
         public final RenderPipeline pipeline;
         public final GpuTextureView textureView;
+        public final Object sampler;
         public final int glyphStart;
         public int glyphEnd;
         public final boolean isColorEmoji;
         public final boolean isDirectMask;
 
-        public TextRun(RenderPipeline pipeline, GpuTextureView textureView, int glyphStart,
+        public TextRun(RenderPipeline pipeline, GpuTextureView textureView, Object sampler, int glyphStart,
                        boolean isColorEmoji, boolean isDirectMask) {
             this.pipeline = pipeline;
             this.textureView = textureView;
+            this.sampler = sampler;
             this.glyphStart = glyphStart;
             this.isColorEmoji = isColorEmoji;
             this.isDirectMask = isDirectMask;

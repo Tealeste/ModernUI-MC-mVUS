@@ -2,11 +2,55 @@ plugins {
     id 'maven-publish'
 }
 
+ext.modernUiMcProfiles = [
+        '1.21.8' : [
+                forge                   : '58.1.0',
+                neoforge                : '21.8.46',
+                fabricLoader            : '0.18.1',
+                fabricApi               : '0.133.0+1.21.8',
+                modMenu                 : '15.0.0',
+                forgeConfigApiPortFabric: '21.8.1',
+        ],
+        '1.21.9' : [
+                forge                   : '59.0.5',
+                neoforge                : '21.9.16-beta',
+                fabricLoader            : '0.18.1',
+                fabricApi               : '0.134.1+1.21.9',
+                modMenu                 : '16.0.0-rc.2',
+                forgeConfigApiPortFabric: '21.9.7',
+        ],
+        '1.21.10': [
+                forge                   : '60.1.5',
+                neoforge                : '21.10.64',
+                fabricLoader            : '0.18.1',
+                fabricApi               : '0.138.4+1.21.10',
+                modMenu                 : '16.0.0-rc.2',
+                forgeConfigApiPortFabric: '21.10.1',
+        ],
+        '1.21.11': [
+                forge                   : '61.0.3',
+                neoforge                : '21.11.17-beta',
+                fabricLoader            : '0.18.1',
+                fabricApi               : '0.140.2+1.21.11',
+                modMenu                 : '17.0.0-beta.1',
+                forgeConfigApiPortFabric: '21.11.1',
+        ],
+]
+
+ext.modernUiMcTarget = (findProperty('minecraft_version') ?: '1.21.11') as String
+if (!ext.modernUiMcProfiles.containsKey(ext.modernUiMcTarget)) {
+    throw new GradleException(
+            "Unsupported minecraft_version='${ext.modernUiMcTarget}'. Supported: ${ext.modernUiMcProfiles.keySet().sort().join(', ')}. " +
+                    "Use -Pminecraft_version=<version> or update ext.modernUiMcProfiles."
+    )
+}
+ext.modernUiMcProfile = ext.modernUiMcProfiles[ext.modernUiMcTarget]
+
 publishing {
     repositories {
         maven {
-            name 'IzzelAliz'
-            url 'https://maven.izzel.io/releases'
+            name = 'IzzelAliz'
+            url = 'https://maven.izzel.io/releases'
             credentials {
                 username = project.findProperty("maven_user")
                 password = project.findProperty("izzel_maven_token")
@@ -23,6 +67,8 @@ allprojects {
     java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
     repositories {
+        // Mojang-hosted artifacts (e.g., LWJGL *-natives-*-patch)
+        maven { url = 'https://libraries.minecraft.net/' }
         mavenCentral()
         mavenLocal()
     }
@@ -84,4 +130,61 @@ allprojects {
     java {
         withSourcesJar()
     }
+
+    tasks.withType(org.gradle.api.tasks.bundling.AbstractArchiveTask).configureEach {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+}
+
+def releaseDir = layout.buildDirectory.dir("release")
+def releaseModVersion = mod_version
+
+def fabricProject = project(':ModernUI-Fabric')
+def forgeProject = project(':ModernUI-Forge')
+def neoForgeProject = project(':ModernUI-NeoForge')
+
+def fabricUniversalJar = fabricProject.layout.buildDirectory.file("libs/${fabricProject.name}-${releaseModVersion}-universal.jar")
+def forgeUniversalJar = forgeProject.layout.buildDirectory.file("libs/${forgeProject.name}-${releaseModVersion}-universal.jar")
+def neoForgeUniversalJar = neoForgeProject.layout.buildDirectory.file("libs/${neoForgeProject.name}-${releaseModVersion}-universal.jar")
+
+tasks.register('syncReleaseJars', Sync) {
+    group = 'distribution'
+    description = 'Builds and collects Fabric/Forge/NeoForge distributable jars into build/release.'
+
+    dependsOn(
+            ':ModernUI-Fabric:remapJar',
+            ':ModernUI-Forge:remapJar',
+            ':ModernUI-NeoForge:remapJar'
+    )
+
+    into(releaseDir)
+
+    from(fabricUniversalJar) {
+        rename { "${rootProject.name}-${releaseModVersion}-fabric.jar" }
+    }
+    from(forgeUniversalJar) {
+        rename { "${rootProject.name}-${releaseModVersion}-forge.jar" }
+    }
+    from(neoForgeUniversalJar) {
+        rename { "${rootProject.name}-${releaseModVersion}-neoforge.jar" }
+    }
+
+    doFirst {
+        [
+                fabricUniversalJar.get().asFile,
+                forgeUniversalJar.get().asFile,
+                neoForgeUniversalJar.get().asFile,
+        ].each { File jarFile ->
+            if (!jarFile.exists()) {
+                throw new GradleException("Expected release jar was not produced: ${jarFile}")
+            }
+        }
+    }
+}
+
+tasks.register('buildReleaseJars') {
+    group = 'build'
+    description = 'One-command build for distributable Fabric/Forge/NeoForge jars.'
+    dependsOn('syncReleaseJars')
 }

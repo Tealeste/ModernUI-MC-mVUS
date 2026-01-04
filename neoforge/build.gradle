@@ -1,12 +1,31 @@
 import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
-    id 'dev.architectury.loom' version '1.11-SNAPSHOT'
+    id 'dev.architectury.loom' version '1.13.467'
     //id 'com.matthewprenger.cursegradle' version '1.4.0'
     id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
-version = "${minecraft_version}-${mod_version}" as String
+version = mod_version as String
+
+def mcPatch = (minecraft_version as String).tokenize('.').last() as int
+def useLegacySources = mcPatch == 8
+def useIdentifierResourceId = mcPatch >= 11
+
+sourceSets {
+    main {
+        java {
+            if (useLegacySources) {
+                setSrcDirs(['src/legacy/java'])
+            } else {
+                setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
+            }
+        }
+        resources {
+            setSrcDirs([useLegacySources ? 'src/legacy/resources' : 'src/main/resources'])
+        }
+    }
+}
 
 configurations {
     shadow
@@ -21,17 +40,17 @@ loom {
 repositories {
     maven {
         // declaring in settings.gradle doesn't work
-        url 'https://maven.neoforged.net/releases/'
+        url = 'https://maven.neoforged.net/releases/'
     }
     maven {
-        url 'https://maven.parchmentmc.org/'
+        url = 'https://maven.parchmentmc.org/'
         content {
             includeGroup 'org.parchmentmc.data'
         }
     }
-    maven { url 'https://modmaven.dev/' }
+    maven { url = 'https://modmaven.dev/' }
     maven {
-        url 'https://maven.izzel.io/releases/'
+        url = 'https://maven.izzel.io/releases/'
     }
     mavenCentral()
     flatDir {
@@ -42,9 +61,9 @@ repositories {
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings loom.officialMojangMappings()
-    neoForge "net.neoforged:neoforge:${neoforge_version}"
+    neoForge "net.neoforged:neoforge:${rootProject.modernUiMcProfile.neoforge}"
 
-    implementation project(':common')
+    compileOnly project(':common')
 
     if (rootProject.file('../ModernUI').exists()) {
         implementation(forgeRuntimeLibrary("icyllis.arc3d:Arc3D"))
@@ -177,8 +196,7 @@ jar {
                 "Specification-Version"   : "2",
                 "Implementation-Title"    : project.name,
                 "Implementation-Version"  : project.version,
-                "Implementation-Vendor"   : "BloCamLimb",
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+                "Implementation-Vendor"   : "BloCamLimb"
         )
     }
 }
@@ -191,7 +209,7 @@ publishing {
             }
             artifact(sourcesJar.archiveFile) {
                 builtBy build
-                classifier 'sources'
+                classifier = 'sources'
             }
             artifactId = project.name
             groupId = project.group

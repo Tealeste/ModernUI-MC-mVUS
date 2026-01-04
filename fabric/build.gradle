@@ -1,12 +1,31 @@
 import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
-    id 'dev.architectury.loom' version '1.11-SNAPSHOT'
+    id 'dev.architectury.loom' version '1.13.467'
     //id 'com.matthewprenger.cursegradle' version '1.4.0'
     id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
-version = "${minecraft_version}-${mod_version}" as String
+version = mod_version as String
+
+def mcPatch = (minecraft_version as String).tokenize('.').last() as int
+def useLegacySources = mcPatch == 8
+def useIdentifierResourceId = mcPatch >= 11
+
+sourceSets {
+    main {
+        java {
+            if (useLegacySources) {
+                setSrcDirs(['src/legacy/java'])
+            } else {
+                setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
+            }
+        }
+        resources {
+            setSrcDirs([useLegacySources ? 'src/legacy/resources' : 'src/main/resources'])
+        }
+    }
+}
 
 configurations {
     shadow
@@ -14,32 +33,32 @@ configurations {
 
 loom {
     silentMojangMappingsLicense()
-    accessWidenerPath = file("src/main/resources/modernui.accesswidener")
+    accessWidenerPath = file(useLegacySources ? "src/legacy/resources/modernui.accesswidener" : "src/main/resources/modernui.accesswidener")
     runConfigs.each { it.setIdeConfigGenerated(true) } // Uncomment this if run configs not generated
     addTaskBeforeRun(":${name}:classes")
 }
 
 repositories {
     maven {
-        url 'https://maven.parchmentmc.org/'
+        url = 'https://maven.parchmentmc.org/'
         content {
             includeGroup 'org.parchmentmc.data'
         }
     }
     maven {
-        url 'https://maven.terraformersmc.com/releases/'
+        url = 'https://maven.terraformersmc.com/releases/'
         content {
             includeGroup 'com.terraformersmc'
         }
     }
     maven {
-        url 'https://raw.githubusercontent.com/Fuzss/modresources/main/maven/'
+        url = 'https://raw.githubusercontent.com/Fuzss/modresources/main/maven/'
         content {
             includeGroup 'fuzs.forgeconfigapiport'
         }
     }
     maven {
-        url 'https://maven.izzel.io/releases/'
+        url = 'https://maven.izzel.io/releases/'
     }
     mavenCentral()
     flatDir {
@@ -51,13 +70,13 @@ dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings loom.officialMojangMappings()
 
-    modImplementation "net.fabricmc:fabric-loader:0.17.2"
-    modApi "net.fabricmc.fabric-api:fabric-api:0.133.0+1.21.8"
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.modernUiMcProfile.fabricLoader}"
+    modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.modernUiMcProfile.fabricApi}"
 
-    modImplementation "com.terraformersmc:modmenu:15.0.0"
-    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:21.8.1"
+    modImplementation "com.terraformersmc:modmenu:${rootProject.modernUiMcProfile.modMenu}"
+    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:${rootProject.modernUiMcProfile.forgeConfigApiPortFabric}"
 
-    implementation project(':common')
+    compileOnly project(':common')
 
     if (rootProject.file('../ModernUI').exists()) {
         implementation("icyllis.arc3d:Arc3D")
@@ -188,8 +207,7 @@ jar {
                 "Specification-Version"   : "2",
                 "Implementation-Title"    : project.name,
                 "Implementation-Version"  : project.version,
-                "Implementation-Vendor"   : "BloCamLimb",
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+                "Implementation-Vendor"   : "BloCamLimb"
         )
     }
 }
@@ -202,7 +220,7 @@ publishing {
             }
             artifact(sourcesJar.archiveFile) {
                 builtBy build
-                classifier 'sources'
+                classifier = 'sources'
             }
             artifactId = project.name
             groupId = project.group

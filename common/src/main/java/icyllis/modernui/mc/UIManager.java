@@ -22,6 +22,7 @@ import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.opengl.GlTextureView;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.*;
 import icyllis.arc3d.core.MathUtil;
@@ -65,7 +66,6 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -195,7 +195,7 @@ public abstract class UIManager implements LifecycleOwner {
         MuiModApi.addOnScreenChangeListener(this::onScreenChange);
         MuiModApi.addOnWindowResizeListener((width, height, guiScale, oldGuiScale) -> resize(width, height));
         MuiModApi.addOnPreKeyInputListener((window, keyCode, scanCode, action, mods) -> {
-            if (window == minecraft.getWindow().getWindow()) {
+            if (window == minecraft.getWindow().handle()) {
                 onPreKeyInput(keyCode, scanCode, action, mods);
             }
         });
@@ -515,10 +515,10 @@ public abstract class UIManager implements LifecycleOwner {
             float y = (float) (mouseHandler.ypos() *
                     window.getHeight() / window.getScreenHeight());
             int mods = 0;
-            if (Screen.hasControlDown()) {
+            if (KeyCompat.isControlDown(window)) {
                 mods |= KeyEvent.META_CTRL_ON;
             }
-            if (Screen.hasShiftDown()) {
+            if (KeyCompat.isShiftDown(window)) {
                 mods |= KeyEvent.META_SHIFT_ON;
             }
             MotionEvent event = MotionEvent.obtain(now, MotionEvent.ACTION_SCROLL,
@@ -539,18 +539,18 @@ public abstract class UIManager implements LifecycleOwner {
                     mWindow.getWidth() / mWindow.getScreenWidth());
             float y = (float) (minecraft.mouseHandler.ypos() *
                     mWindow.getHeight() / mWindow.getScreenHeight());
-            int buttonState = 0;
-            for (int i = 0; i < 5; i++) {
-                if (glfwGetMouseButton(mWindow.getWindow(), i) == GLFW_PRESS) {
-                    buttonState |= 1 << i;
-                }
+            int actionButton = 1 << button;
+            int buttonState = mButtonState;
+            if (action == GLFW_PRESS) {
+                buttonState |= actionButton;
+            } else if (action == GLFW_RELEASE) {
+                buttonState &= ~actionButton;
             }
             mButtonState = buttonState;
             int hoverAction = action == GLFW_PRESS ?
                     MotionEvent.ACTION_BUTTON_PRESS : MotionEvent.ACTION_BUTTON_RELEASE;
             int touchAction = action == GLFW_PRESS ?
                     MotionEvent.ACTION_DOWN : MotionEvent.ACTION_UP;
-            int actionButton = 1 << button;
             MotionEvent ev = MotionEvent.obtain(now, hoverAction, actionButton,
                     x, y, mods, buttonState, 0);
             mRoot.enqueueInputEvent(ev);
@@ -585,7 +585,7 @@ public abstract class UIManager implements LifecycleOwner {
                 }
             }
         }
-        if (!Screen.hasControlDown() || !Screen.hasShiftDown() || !ModernUIMod.isDeveloperMode()) {
+        if (!ModernUIMod.isDeveloperMode() || !KeyCompat.isControlDown(mWindow) || !KeyCompat.isShiftDown(mWindow)) {
             return;
         }
         if (action == GLFW_PRESS) {
@@ -655,22 +655,22 @@ public abstract class UIManager implements LifecycleOwner {
 
     public void onGameLoadFinished() {
         if (sDingEnabled) {
-            glfwRequestWindowAttention(minecraft.getWindow().getWindow());
+            glfwRequestWindowAttention(minecraft.getWindow().handle());
             final String sound = sDingSound;
             final float volume = sDingVolume;
             if (volume > 0) {
-                ResourceLocation soundEvent = null;
+                Object soundEventId = null;
                 if (sound != null && !sound.isEmpty()) {
-                    soundEvent = ResourceLocation.tryParse(sound);
-                    if (soundEvent == null) {
+                    soundEventId = ResourceIdCompat.tryParse(sound);
+                    if (soundEventId == null) {
                         LOGGER.warn(MARKER, "The specified ding sound \"{}\" has wrong format", sound);
-                    } else if (minecraft.getSoundManager().getSoundEvent(soundEvent) == null) {
+                    } else if (SoundManagerCompat.getSoundEvent(minecraft.getSoundManager(), soundEventId) == null) {
                         LOGGER.warn(MARKER, "The specified ding sound \"{}\" is not available", sound);
-                        soundEvent = null;
+                        soundEventId = null;
                     }
                 }
-                final SoundEvent finalSoundEvent = soundEvent != null
-                        ? SoundEvent.createVariableRangeEvent(soundEvent)
+                final SoundEvent finalSoundEvent = soundEventId != null
+                        ? SoundEventCompat.createVariableRangeEvent(soundEventId)
                         : SoundEvents.EXPERIENCE_ORB_PICKUP;
                 minecraft.getSoundManager().play(
                         SimpleSoundInstance.forUI(finalSoundEvent, 1.0f, volume)
@@ -710,7 +710,7 @@ public abstract class UIManager implements LifecycleOwner {
                 bitmap.getAddress());
         GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, boundTexture);
         surface.unref();
-        Util.ioPool().execute(() -> {
+        UtilCompat.ioPool().execute(() -> {
             Bitmap converted = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Format.RGBA_8888);
             converted.setPremultiplied(false);
             try (bitmap) {
@@ -759,8 +759,8 @@ public abstract class UIManager implements LifecycleOwner {
     protected void changeRadialBlur() {
         if (minecraft.gameRenderer.currentPostEffect() == null) {
             LOGGER.info(MARKER, "Load post-processing effect");
-            final ResourceLocation effect;
-            if (InputConstants.isKeyDown(mWindow.getWindow(), GLFW_KEY_RIGHT_SHIFT)) {
+            final Object effect;
+            if (KeyCompat.isKeyDown(mWindow, GLFW_KEY_RIGHT_SHIFT)) {
                 effect = ModernUIMod.location("grayscale");
             } else {
                 effect = ModernUIMod.location("radial_blur");
@@ -802,7 +802,7 @@ public abstract class UIManager implements LifecycleOwner {
         if (menu != null) {
             pw.println(menu.getClass().getSimpleName());
             try {
-                ResourceLocation name = BuiltInRegistries.MENU.getKey(menu.getType());
+                Object name = BuiltInRegistries.MENU.getKey(menu.getType());
                 pw.print("  Registry Name: ");
                 pw.println(name);
             } catch (Exception ignored) {
@@ -894,6 +894,19 @@ public abstract class UIManager implements LifecycleOwner {
         ImageViewProxy surface = frameTask.getRight();
 
         if (recording != null) {
+            CommandBuffer commandBuffer = context.currentCommandBuffer();
+            if (commandBuffer instanceof GLCommandBuffer glCommandBuffer) {
+                glCommandBuffer.resetStates();
+                // Ensure key GL caps are in a known-good state before Arc3D executes the Recording.
+                // Arc3D may not touch some caps every frame, so leakage from Blaze3D/mods can corrupt UI.
+                glCommandBuffer.flushScissorTest(false);
+                glCommandBuffer.flushColorWrite(true);
+                GL33C.glDisable(GL33C.GL_STENCIL_TEST);
+                GL33C.glDisable(GL33C.GL_DEPTH_TEST);
+            }
+        }
+
+        if (recording != null) {
             boolean added = context.addTask(recording);
             recording.close();
             if (!added) {
@@ -954,7 +967,6 @@ public abstract class UIManager implements LifecycleOwner {
                     // using the nearest sampler is performant
                     // Arc3D always uses a sampler object, so we don't care if the
                     // texture parameters are modified by Blaze3D
-                    mLayerTexture.setTextureFilter(FilterMode.NEAREST, /*useMipmaps*/ false);
                     mLayerTextureView = (GlTextureView) MuiModApi.get().getRealGpuDevice()
                             .createTextureView(mLayerTexture);
                 } else {
@@ -965,7 +977,10 @@ public abstract class UIManager implements LifecycleOwner {
                 MuiModApi.get().submitGuiElementRenderState(gr, new BlitRenderState(
                         // render target is always premultiplied
                         RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA,
-                        TextureSetup.singleTexture(mLayerTextureView),
+                        TextureSetupCompat.singleTexture(
+                                mLayerTextureView,
+                                SamplerCompat.clampToEdge(FilterMode.NEAREST)
+                        ),
                         new Matrix3x2f().scale(1.0F / mWindow.getGuiScale()),
                         0, 0, mWindow.getWidth(), mWindow.getHeight(),
                         // since the projection is flipped, we need to flip the texture coordinates
@@ -982,6 +997,18 @@ public abstract class UIManager implements LifecycleOwner {
                 handler.render(gr, mouseX, mouseY, deltaTick, mWindow);
             }
         }
+
+        context.getDevice().markContextDirty(
+                Engine.GLBackendState.kRenderTarget |
+                        Engine.GLBackendState.kPixelStore |
+                        Engine.GLBackendState.kPipeline |
+                        Engine.GLBackendState.kTexture |
+                        Engine.GLBackendState.kStencil |
+                        Engine.GLBackendState.kRaster |
+                        Engine.GLBackendState.kBlend |
+                        Engine.GLBackendState.kView |
+                        Engine.GLBackendState.kMisc
+        );
     }
 
     /**
@@ -1021,7 +1048,7 @@ public abstract class UIManager implements LifecycleOwner {
         mRoot.mHandler.post(this::restoreLayoutTransition);
         mRoot.mRawDrawHandlers.clear();
         mScreen = null;
-        glfwSetCursor(mWindow.getWindow(), MemoryUtil.NULL);
+        glfwSetCursor(mWindow.handle(), MemoryUtil.NULL);
     }
 
     public void drawExtTooltip(ItemStack itemStack,
@@ -1030,7 +1057,7 @@ public abstract class UIManager implements LifecycleOwner {
                                int x, int y, Font font,
                                int screenWidth, int screenHeight,
                                ClientTooltipPositioner positioner,
-                               ResourceLocation tooltipStyle) {
+                               Object tooltipStyle) {
         // screen coordinates to pixels for rendering
         final Window window = mWindow;
         final MouseHandler mouseHandler = minecraft.mouseHandler;
@@ -1076,7 +1103,12 @@ public abstract class UIManager implements LifecycleOwner {
         if (minecraft.isRunning() && mRunning &&
                 mScreen == null && minecraft.getOverlay() == null) {
             // Render the UI above everything
-            render(new GuiGraphics(minecraft, guiRenderState), 0, 0, 0);
+            render(GuiGraphicsCompat.create(
+                    minecraft,
+                    guiRenderState,
+                    mWindow.getGuiScaledWidth(),
+                    mWindow.getGuiScaledHeight()
+            ), 0, 0, 0);
         }
     }
 
@@ -1217,7 +1249,7 @@ public abstract class UIManager implements LifecycleOwner {
                     if (event.getKeyCode() == KeyEvent.KEY_ESCAPE) {
                         back = true;
                     } else {
-                        InputConstants.Key key = InputConstants.getKey(event.getKeyCode(), event.getScanCode());
+                        InputConstants.Key key = KeyCompat.getKey(event.getKeyCode(), event.getScanCode());
                         back = MuiModApi.get().isKeyBindingMatches(minecraft.options.keyInventory, key);
                     }
                 } else {
@@ -1399,7 +1431,7 @@ public abstract class UIManager implements LifecycleOwner {
 
         @MainThread
         protected void applyPointerIcon(int pointerType) {
-            minecraft.schedule(() -> glfwSetCursor(mWindow.getWindow(),
+            minecraft.schedule(() -> glfwSetCursor(mWindow.handle(),
                     PointerIcon.getSystemIcon(pointerType).getHandle()));
         }
 

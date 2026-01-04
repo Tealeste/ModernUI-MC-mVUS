@@ -57,7 +57,7 @@ public class MixinGameRenderer {
 
     @ModifyArg(method = "render",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlobalSettingsUniform;update" +
-                    "(IIDJLnet/minecraft/client/DeltaTracker;I)V"),
+                    "(IIDJLnet/minecraft/client/DeltaTracker;ILnet/minecraft/client/Camera;Z)V"),
             index = 5)
     private int onGetBlurRadius(int option) {
         return BlurHandler.INSTANCE.getBlurRadius(option);

@@ -7,7 +7,6 @@
   "package": "icyllis.modernui.mc.mixin",
   "client": [
     "AccessClientTextTooltip",
-    "AccessGameRenderer",
     "AccessOptions",
     "MixinChatFormatting",
     "MixinChatScreen",

@@ -1,8 +1,14 @@
 Changelogs
 ===
-### Modern UI 3.12.0.4 (3.12.0.3, 3.12.0.2, 3.12.0.1)
+### Modern UI 3.12.0.5-build.1+mc1.21.11 — 1.21.11 compatibility update (2026-01-03)
+* Update default build target to Minecraft 1.21.11 and validate 1.21.8–1.21.11 across Fabric/Forge/NeoForge
+* Expand loader metadata version ranges to cover `<1.21.12` and update minimum loader requirements
+* Add `-Pminecraft_version=...` Gradle profiles for 1.21.8/1.21.9/1.21.10/1.21.11 and compat shims for patch-level API drift
+* Update Forge/NeoForge `pack.mcmeta` schemas for 1.21.8 vs 1.21.9+ pack-format changes
+
+### Modern UI 3.12.0.5-build.1+mc1.21.11 (3.12.0.4, 3.12.0.3, 3.12.0.2, 3.12.0.1)
 Changes from
-* 3.11.1.11 → 3.12.0.4 for Minecraft 1.21.6-1.21.8
+* 3.11.1.11 → 3.12.0.5-build.1+mc1.21.11 for Minecraft 1.21.6-1.21.11
 * 3.11.1.11 → 3.12.0.3 for Minecraft 1.21.4
 * 3.11.1.9 → 3.12.0.2 for Minecraft 1.21-1.21.1
 * 3.11.1.6 → 3.12.0.1 for Minecraft 1.20-1.20.1

@@ -18,25 +18,23 @@
 
 package icyllis.modernui.mc.mixin;
 
-import com.mojang.blaze3d.shaders.ShaderType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import icyllis.arc3d.engine.ContextOptions;
 import icyllis.modernui.core.Core;
 import icyllis.modernui.mc.ModernUIClient;
 import icyllis.modernui.mc.ModernUIMod;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.TimeSource;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.Configuration;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 @Mixin(RenderSystem.class)
 public class MixinRenderSystem {
@@ -53,7 +51,7 @@ public class MixinRenderSystem {
 
     @Inject(method = "initRenderer", at = @At("TAIL"), remap = false)
     private static void onInitRenderer(long window, int debugLevel, boolean debugSync,
-                                       BiFunction<ResourceLocation, ShaderType, String> defaultShaderSource,
+                                       @Coerce Object shaderSource,
                                        boolean enableDebugLabels, CallbackInfo ci) {
         Core.initialize();
         ContextOptions options = new ContextOptions();

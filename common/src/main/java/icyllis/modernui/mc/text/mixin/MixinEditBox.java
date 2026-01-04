@@ -20,9 +20,9 @@ package icyllis.modernui.mc.text.mixin;
 
 import icyllis.modernui.mc.GradientRectangleRenderState;
 import icyllis.modernui.mc.MuiModApi;
+import icyllis.modernui.mc.UtilCompat;
 import icyllis.modernui.mc.text.*;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -43,7 +43,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.function.BiFunction;
 
 /**
  * Changes:
@@ -94,7 +93,7 @@ public abstract class MixinEditBox extends AbstractWidget {
     private String suggestion;
 
     @Shadow
-    private BiFunction<String, Integer, FormattedCharSequence> formatter;
+    protected abstract FormattedCharSequence applyFormat(String string, int start);
 
     @Shadow
     private int textX;
@@ -151,7 +150,7 @@ public abstract class MixinEditBox extends AbstractWidget {
 
         final boolean cursorInRange = viewCursorPos >= 0 && viewCursorPos <= viewText.length();
         final boolean cursorVisible =
-                isFocused() && (((Util.getMillis() - focusedTime) / 500) & 1) == 0 && cursorInRange;
+                isFocused() && (((UtilCompat.getMillis() - focusedTime) / 500) & 1) == 0 && cursorInRange;
 
         final int baseX = textX;
         final int baseY = textY;
@@ -160,7 +159,7 @@ public abstract class MixinEditBox extends AbstractWidget {
         final boolean separate;
         if (!viewText.isEmpty()) {
             String subText = cursorInRange ? viewText.substring(0, viewCursorPos) : viewText;
-            FormattedCharSequence subSequence = formatter.apply(subText, displayPos);
+            FormattedCharSequence subSequence = applyFormat(subText, displayPos);
             if (!(subSequence instanceof VanillaTextWrapper)) {
                 separate = true;
                 gr.drawString(font, subSequence, baseX, baseY, color, true);
@@ -201,7 +200,7 @@ public abstract class MixinEditBox extends AbstractWidget {
 
         if (!viewText.isEmpty() && cursorInRange && viewCursorPos < viewText.length() && separate) {
             String subText = viewText.substring(viewCursorPos);
-            FormattedCharSequence subSequence = formatter.apply(subText, cursorPos);
+            FormattedCharSequence subSequence = applyFormat(subText, cursorPos);
             gr.pose().pushMatrix();
             gr.pose().translate(hori - baseX, 0);
             gr.drawString(font, subSequence, baseX, baseY, color, true);

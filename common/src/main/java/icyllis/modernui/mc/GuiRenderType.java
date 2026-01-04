@@ -31,16 +31,31 @@ import org.jetbrains.annotations.ApiStatus;
 @ApiStatus.Internal
 public abstract class GuiRenderType {
 
-    public static final RenderPipeline PIPELINE_TOOLTIP = RenderPipeline.builder()
-            .withLocation(ModernUIMod.location("pipeline/modern_tooltip"))
-            .withVertexShader(ModernUIMod.location("core/rendertype_modern_tooltip"))
-            .withFragmentShader(ModernUIMod.location("core/rendertype_modern_tooltip"))
+    public static final RenderPipeline PIPELINE_TOOLTIP = withFragmentShader(
+            withVertexShader(
+                    withLocation(RenderPipeline.builder(), "pipeline/modern_tooltip"),
+                    "core/rendertype_modern_tooltip"
+            ),
+            "core/rendertype_modern_tooltip"
+    )
             .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
             .withUniform("Projection", UniformType.UNIFORM_BUFFER)
             .withUniform("ModernTooltip", UniformType.UNIFORM_BUFFER)
             .withBlend(BlendFunction.TRANSLUCENT)
             .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
             .build();
+
+    private static RenderPipeline.Builder withLocation(RenderPipeline.Builder builder, String path) {
+        return RenderPipelineCompat.withLocation(builder, ModernUIMod.location(path));
+    }
+
+    private static RenderPipeline.Builder withVertexShader(RenderPipeline.Builder builder, String path) {
+        return RenderPipelineCompat.withVertexShader(builder, ModernUIMod.location(path));
+    }
+
+    private static RenderPipeline.Builder withFragmentShader(RenderPipeline.Builder builder, String path) {
+        return RenderPipelineCompat.withFragmentShader(builder, ModernUIMod.location(path));
+    }
 
     /*public static final ShaderProgram SHADER_TOOLTIP = new ShaderProgram(
             ModernUIMod.location("core/rendertype_modern_tooltip"),

@@ -20,7 +20,7 @@ plugins {
 
 apply plugin: 'org.spongepowered.mixin'
 
-version = "${minecraft_version}-${mod_version}" as String
+version = mod_version as String
 
 configurations {
     shadow

@@ -18,11 +18,11 @@
 
 package icyllis.modernui.mc.text.mixin;
 
+import icyllis.modernui.mc.MultiBufferSourceCompat;
 import icyllis.modernui.mc.text.TextLayoutEngine;
 import icyllis.modernui.mc.text.TextRenderType;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderBuffers;
-import net.minecraft.client.renderer.RenderType;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -38,25 +38,16 @@ public class MixinLevelRenderer {
     @Final
     private RenderBuffers renderBuffers;
 
-    // neoforge has lambda$addMainPass$2 but different signature from forge
-    @Inject(method = {"method_62214", "lambda$addMainPass$3", "lambda$addMainPass$2" +
-            "(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lnet/minecraft/client/DeltaTracker;" +
-            "Lnet/minecraft/client/Camera;Lnet/minecraft/util/profiling/ProfilerFiller;Lorg/joml/Matrix4f;" +
-            "Lcom/mojang/blaze3d/resource/ResourceHandle;Lcom/mojang/blaze3d/resource/ResourceHandle;" +
-            "Lnet/minecraft/client/renderer/culling/Frustum;ZLcom/mojang/blaze3d/resource/ResourceHandle;" +
-            "Lcom/mojang/blaze3d/resource/ResourceHandle;)V"},
+    // Avoid targeting unstable lambda$addMainPass$* names; method_62214 contains endOutlineBatch across 1.21.x.
+    @Inject(method = "method_62214",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/OutlineBufferSource;endOutlineBatch()V"))
     private void endTextBatch(CallbackInfo ci) {
         if (TextLayoutEngine.sUseTextShadersInWorld) {
-            RenderType firstSDFFillType = TextRenderType.getFirstSDFFillType();
-            RenderType firstSDFStrokeType = TextRenderType.getFirstSDFStrokeType();
-            if (firstSDFFillType != null) {
-                renderBuffers.bufferSource().endBatch(firstSDFFillType);
-            }
-            if (firstSDFStrokeType != null) {
-                renderBuffers.bufferSource().endBatch(firstSDFStrokeType);
-            }
+            Object firstSDFFillType = TextRenderType.getFirstSDFFillType();
+            Object firstSDFStrokeType = TextRenderType.getFirstSDFStrokeType();
+            MultiBufferSourceCompat.endBatch(renderBuffers.bufferSource(), firstSDFFillType);
+            MultiBufferSourceCompat.endBatch(renderBuffers.bufferSource(), firstSDFStrokeType);
         }
     }
 }

@@ -44,6 +44,7 @@ import icyllis.modernui.mc.ModernUIMod;
 import icyllis.modernui.mc.MuiModApi;
 import icyllis.modernui.mc.MuiPlatform;
 import icyllis.modernui.mc.UIManager;
+import icyllis.modernui.mc.UtilCompat;
 import icyllis.modernui.resources.TypedValue;
 import icyllis.modernui.text.Editable;
 import icyllis.modernui.text.InputFilter;
@@ -61,7 +62,6 @@ import icyllis.modernui.view.OneShotPreDrawListener;
 import icyllis.modernui.view.View;
 import icyllis.modernui.view.ViewGroup;
 import icyllis.modernui.widget.*;
-import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
 
@@ -160,7 +160,7 @@ public class PreferencesFragment extends Fragment {
                 mTextConfigChanged = false;
             }
             assert count == configs.length;
-            Util.ioPool().execute(() -> {
+            UtilCompat.ioPool().execute(() -> {
                 var service = MuiPlatform.get();
                 for (int type : configs) {
                     service.saveConfig(type);

@@ -19,7 +19,6 @@
 package icyllis.modernui.mc.testforge.trash;
 
 import icyllis.arc3d.opengl.GLTexture;
-import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 
@@ -29,7 +28,7 @@ import javax.annotation.Nullable;
 @Deprecated
 public class Icon {
 
-    private final ResourceLocation location;
+    private final Object location;
 
     @Nullable
     private GLTexture texture;
@@ -51,7 +50,7 @@ public class Icon {
      * @param v2       texture bottom pos [0,1]
      * @param aa       enable anti-aliasing for HD textures
      */
-    public Icon(ResourceLocation location, float u1, float v1, float u2, float v2, boolean aa) {
+    public Icon(Object location, float u1, float v1, float u2, float v2, boolean aa) {
         this.location = location;
         this.u1 = u1;
         this.v1 = v1;

@@ -37,7 +37,7 @@ import static icyllis.modernui.mc.ModernUIMod.*;
 public final class ModernUIText {
 
     static {
-        assert FMLEnvironment.dist.isClient();
+        assert FMLEnvironment.getDist().isClient();
     }
 
     private ModernUIText() {
