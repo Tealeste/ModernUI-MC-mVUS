@@ -1,9 +1,9 @@
+[![ModernUI-MC-mVUS](https://cdn.modrinth.com/data/cached_images/fde3425a102171a17ddb69b82538b095ef84ebc8.png)](https://modrinth.com/mod/modernui-mc-mvus)
+
 # Modern UI for Minecraft — mVUS
 
 [English](README.en.md) | 中文
 
-[![CurseForge](https://cf.way2muchnoise.eu/full_352491_downloads.svg)](https://www.curseforge.com/minecraft/mc-mods/modern-ui)
-[![CurseForge](https://cf.way2muchnoise.eu/versions/For%20Minecraft_352491_all.svg)](https://www.curseforge.com/minecraft/mc-mods/modern-ui)
 [![License](https://img.shields.io/badge/License-LGPL--3.0--or--later-blue.svg?style=flat-square)](https://www.gnu.org/licenses/lgpl-3.0.en.html)
 
 > 这是 **Modern UI for Minecraft** 的非官方维护分支，致力于在 Minecraft 的次要/补丁版本中保持持续可用；上游项目则更专注于稳定/LTS 版本。
@@ -59,14 +59,13 @@ ModernUI-MC 内置为 Minecraft 量身打造的强大文本布局与渲染系统
 - 更精致的提示框样式（圆角、标题间距、RTL、像素对齐定位、动画配色）
 
 ## 下载与社区
-- 下载： [CurseForge](https://www.curseforge.com/minecraft/mc-mods/modern-ui) · [Modrinth](https://modrinth.com/mod/modern-ui)
-- 问题反馈：本分支 [Tealeste/ModernUI](https://github.com/Tealeste/ModernUI-MC-mVUS/issues)
-- 交流： [Discord](https://discord.gg/kmyGKt2)
+- 下载： [Modrinth](https://modrinth.com/mod/modernui-mc-mvus)
+- 问题反馈（本分支） [Tealeste/ModernUI](https://github.com/Tealeste/ModernUI-MC-mVUS/issues)
 
 ## 兼容性
-- Minecraft：`1.21.8`–`1.21.11`（Fabric / Forge / NeoForge）
+- Minecraft：`1.21.11`（Fabric / Forge / NeoForge）
 - Java：`21`
-- 构建目标：默认 `minecraft_version=1.21.11`（见 `gradle.properties`）；可通过 `-Pminecraft_version=1.21.x` 覆盖（见 `build.gradle` 的 `modernUiMcProfiles`）
+- 构建目标：默认 `minecraft_version=1.21.11`
 
 ## 面向模组开发者
 ### Gradle 仓库
@@ -188,14 +187,13 @@ dependencies {
 请将 `ModernUI` 仓库克隆到本仓库同级目录，并保持二者同步更新。
 
 - 环境要求：JDK `21`（Gradle 本身需要在 Java 21 下运行；较新的 JDK（如 25）不受支持）
-  - 如有需要，请在运行 Gradle 时设置 `JAVA_HOME`（macOS 示例）：`JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home`
+  - 如有需要，请在运行 Gradle 时设置 `JAVA_HOME`
 - 一条命令构建可分发 jar（Fabric / Forge / NeoForge）：`./gradlew buildReleaseJars`
 - 输出位置（可直接用于发布）：`build/release/ModernUI-MC-<mod_version>-{fabric,forge,neoforge}.jar`
 - 运行开发客户端：
   - Fabric：`./gradlew :ModernUI-Fabric:runClient`
   - Forge：`./gradlew :ModernUI-Forge:runClient`
   - NeoForge：`./gradlew :ModernUI-NeoForge:runClient`
-- 覆盖目标 Minecraft 版本：`./gradlew buildReleaseJars -Pminecraft_version=1.21.x`
 
 构建 ModernUI-MC 时，通用 jar 不仅包含 ModernUI-MC 本体，也会将 ModernUI 框架及其扩展（不含 Kotlin 扩展）进行 shadow，
 并打包额外资源/运行时依赖（视构建配置而定）。

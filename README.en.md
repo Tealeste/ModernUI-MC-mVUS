@@ -1,9 +1,9 @@
+[![ModernUI-MC-mVUS](https://cdn.modrinth.com/data/cached_images/fde3425a102171a17ddb69b82538b095ef84ebc8.png)](https://modrinth.com/mod/modernui-mc-mvus)
+
 # Modern UI for Minecraft — mVUS
 
 English | [中文](README.md)
 
-[![CurseForge](https://cf.way2muchnoise.eu/full_352491_downloads.svg)](https://www.curseforge.com/minecraft/mc-mods/modern-ui)
-[![CurseForge](https://cf.way2muchnoise.eu/versions/For%20Minecraft_352491_all.svg)](https://www.curseforge.com/minecraft/mc-mods/modern-ui)
 [![License](https://img.shields.io/badge/License-LGPL--3.0--or--later-blue.svg?style=flat-square)](https://www.gnu.org/licenses/lgpl-3.0.en.html)
 
 > A maintenance fork of **Modern UI for Minecraft** that keeps the mod building and running on minor/patch Minecraft versions, while upstream focuses on stable/LTS releases.
@@ -63,14 +63,13 @@ This mod also includes utilities that improve performance and day-to-day UX, suc
 - Enhanced tooltip style (rounded borders, title spacing, RTL, pixel-snapped positioning, animated colors)
 
 ## Downloads & Community
-- Downloads: [CurseForge](https://www.curseforge.com/minecraft/mc-mods/modern-ui) · [Modrinth](https://modrinth.com/mod/modern-ui)
-- Issues: upstream tracker on [BloCamLimb/ModernUI](https://github.com/BloCamLimb/ModernUI/issues)
-- Chat: [Discord](https://discord.gg/kmyGKt2)
+- Downloads: [Modrinth](https://modrinth.com/mod/modernui-mc-mvus)
+- Issues (this fork): [Tealeste/ModernUI-MC-mVUS](https://github.com/Tealeste/ModernUI-MC-mVUS/issues)
 
 ## Compatibility
-- Minecraft: `1.21.8`–`1.21.11` (Fabric / Forge / NeoForge)
+- Minecraft: `1.21.11` (Fabric / Forge / NeoForge)
 - Java: `21`
-- Build target: defaults to `minecraft_version=1.21.11` (`gradle.properties`); override via `-Pminecraft_version=1.21.x` (see `build.gradle` `modernUiMcProfiles`)
+- Build target: defaults to `minecraft_version=1.21.11`
 
 ## For Mod Developers
 ### Gradle repositories
@@ -193,14 +192,13 @@ ModernUI-MC uses a composite build when `../ModernUI` exists (see `settings.grad
 development, clone `ModernUI` next to this repository and keep both up to date.
 
 - Requirements: JDK `21` (Gradle itself must run on Java 21; newer JDKs like 25 are not supported)
-  - If needed, set `JAVA_HOME` when invoking Gradle (macOS example): `JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home`
+  - If needed, set `JAVA_HOME` when invoking Gradle
 - One-command distributable jars (Fabric / Forge / NeoForge): `./gradlew buildReleaseJars`
 - Output jars (ready for distribution): `build/release/ModernUI-MC-<mod_version>-{fabric,forge,neoforge}.jar`
 - Run a dev client:
   - Fabric: `./gradlew :ModernUI-Fabric:runClient`
   - Forge: `./gradlew :ModernUI-Forge:runClient`
   - NeoForge: `./gradlew :ModernUI-NeoForge:runClient`
-- Override the target Minecraft version: `./gradlew buildReleaseJars -Pminecraft_version=1.21.x`
 
 When you build ModernUI-MC, the universal jar will contain not only ModernUI-MC itself, but also shadow the ModernUI
 framework and extensions (except Kotlin extensions), plus additional assets/runtime as needed.
