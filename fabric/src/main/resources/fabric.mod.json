@@ -35,11 +35,11 @@
   ],
   "accessWidener" : "modernui.accesswidener",
   "depends": {
-    "fabricloader": ">=0.18.1",
-    "minecraft": ">=1.21.10 <1.21.11",
+    "fabricloader": "${fabric_loader_range}",
+    "minecraft": "${minecraft_range}",
     "java": ">=21",
-    "fabric-api": ">=0.138.4",
-    "forgeconfigapiport": ">=21.10.1"
+    "fabric-api": "${fabric_api_range}",
+    "forgeconfigapiport": "${forgeconfigapiport_range}"
   },
   "conflicts": {
     "blur": "*",

@@ -32,7 +32,13 @@ dependencies {
 sourceSets {
     main {
         java {
-            setSrcDirs(['src/main/java'])
+            def mcPatch = (minecraft_version as String).tokenize('.').last() as int
+            if (mcPatch < 10) {
+                setSrcDirs(['src/pre_1_21_10/java'])
+            } else {
+                def useIdentifierResourceId = mcPatch >= 11
+                setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
+            }
         }
         resources {
             setSrcDirs(['src/main/resources'])

@@ -14,7 +14,11 @@ def useIdentifierResourceId = mcPatch >= 11
 sourceSets {
     main {
         java {
-            setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
+            if (mcPatch < 10) {
+                setSrcDirs(['src/pre_1_21_10/java'])
+            } else {
+                setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
+            }
         }
         resources {
             setSrcDirs(['src/main/resources'])
@@ -187,10 +191,25 @@ if (project.hasProperty("keystore")) {
 }
 
 processResources {
+    def fabricLoaderRange = ">=${rootProject.modernUiMcProfile.fabricLoader}"
+    def minecraftRange = rootProject.modernUiMcVersionRangeFabric as String
+    def fabricApiRange = ">=${rootProject.modernUiFabricApiMin}"
+    def forgeConfigApiPortRange = ">=${rootProject.modernUiMcProfile.forgeConfigApiPortFabric}"
+
     inputs.property 'version', mod_version
+    inputs.property 'fabric_loader_range', fabricLoaderRange
+    inputs.property 'minecraft_range', minecraftRange
+    inputs.property 'fabric_api_range', fabricApiRange
+    inputs.property 'forgeconfigapiport_range', forgeConfigApiPortRange
 
     filesMatching("fabric.mod.json") {
-        expand 'version': mod_version
+        expand(
+                version: mod_version,
+                fabric_loader_range: fabricLoaderRange,
+                minecraft_range: minecraftRange,
+                fabric_api_range: fabricApiRange,
+                forgeconfigapiport_range: forgeConfigApiPortRange
+        )
     }
 }
 
