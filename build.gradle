@@ -3,6 +3,14 @@ plugins {
 }
 
 ext.modernUiMcProfiles = [
+        '1.21.8' : [
+                forge                   : '58.1.0',
+                neoforge                : '21.8.46',
+                fabricLoader            : '0.17.2',
+                fabricApi               : '0.133.0+1.21.8',
+                modMenu                 : '15.0.0',
+                forgeConfigApiPortFabric: '21.8.1',
+        ],
         '1.21.10': [
                 forge                   : '60.1.5',
                 neoforge                : '21.10.64',
@@ -23,12 +31,47 @@ ext.modernUiMcProfiles = [
 
 ext.modernUiMcTarget = (findProperty('minecraft_version') ?: '1.21.11') as String
 if (!ext.modernUiMcProfiles.containsKey(ext.modernUiMcTarget)) {
+    def supportedMcVersions = ext.modernUiMcProfiles.keySet().toList().sort { a, b ->
+        def pa = a.tokenize('.').collect { it as int }
+        def pb = b.tokenize('.').collect { it as int }
+        def c0 = pa[0] <=> pb[0]
+        if (c0 != 0) {
+            return c0
+        }
+        def c1 = pa[1] <=> pb[1]
+        if (c1 != 0) {
+            return c1
+        }
+        pa[2] <=> pb[2]
+    }
     throw new GradleException(
-            "Unsupported minecraft_version='${ext.modernUiMcTarget}'. Supported: ${ext.modernUiMcProfiles.keySet().sort().join(', ')}. " +
+            "Unsupported minecraft_version='${ext.modernUiMcTarget}'. Supported: ${supportedMcVersions.join(', ')}. " +
                     "Use -Pminecraft_version=<version> or update ext.modernUiMcProfiles."
     )
 }
 ext.modernUiMcProfile = ext.modernUiMcProfiles[ext.modernUiMcTarget]
+
+def mcTokens = ext.modernUiMcTarget.tokenize('.')
+if (mcTokens.size() != 3 || !mcTokens[2].isInteger()) {
+    throw new GradleException("Invalid minecraft_version='${ext.modernUiMcTarget}'. Expected format: <major>.<minor>.<patch> (e.g. 1.21.11)")
+}
+ext.modernUiMcTargetNext = "${mcTokens[0]}.${mcTokens[1]}.${(mcTokens[2] as int) + 1}"
+ext.modernUiMcVersionRangeFabric = ">=${ext.modernUiMcTarget} <${ext.modernUiMcTargetNext}"
+ext.modernUiMcVersionRangeToml = "[${ext.modernUiMcTarget}, ${ext.modernUiMcTargetNext})"
+ext.modernUiForgeFmlMajor = (ext.modernUiMcProfile.forge as String).tokenize('.')[0]
+ext.modernUiFabricApiMin = (ext.modernUiMcProfile.fabricApi as String).tokenize('+')[0]
+
+def modVersionBase = (findProperty('mod_version_base') ?: findProperty('mod_version')) as String
+if (!modVersionBase) {
+    throw new GradleException("Missing 'mod_version_base' in gradle.properties (e.g. mod_version_base=3.12.0.5-build.1)")
+}
+def mcSuffixIndex = modVersionBase.indexOf('+mc')
+if (mcSuffixIndex != -1) {
+    modVersionBase = modVersionBase.substring(0, mcSuffixIndex)
+}
+ext.mod_version = "${modVersionBase}+mc${ext.modernUiMcTarget}"
+ext.forge_version = ext.modernUiMcProfile.forge
+ext.neoforge_version = ext.modernUiMcProfile.neoforge
 
 publishing {
     repositories {

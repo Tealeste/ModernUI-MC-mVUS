@@ -14,7 +14,11 @@ def useIdentifierResourceId = mcPatch >= 11
 sourceSets {
     main {
         java {
-            setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
+            if (mcPatch < 10) {
+                setSrcDirs(['src/pre_1_21_10/java'])
+            } else {
+                setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
+            }
         }
         resources {
             setSrcDirs(['src/main/resources'])
@@ -341,10 +345,22 @@ if (project.hasProperty("keystore")) {
 }
 
 processResources {
+    def javaFmlRange = "[${rootProject.modernUiForgeFmlMajor},)"
+    def forgeVersionRange = "[${rootProject.modernUiMcProfile.forge},)"
+    def minecraftVersionRange = rootProject.modernUiMcVersionRangeToml as String
+
     inputs.property 'version', mod_version
+    inputs.property 'javafml_range', javaFmlRange
+    inputs.property 'forge_version_range', forgeVersionRange
+    inputs.property 'minecraft_version_range', minecraftVersionRange
 
     filesMatching("META-INF/mods.toml") {
-        expand 'version': mod_version
+        expand(
+                version: mod_version,
+                javafml_range: javaFmlRange,
+                forge_version_range: forgeVersionRange,
+                minecraft_version_range: minecraftVersionRange
+        )
     }
 }
 

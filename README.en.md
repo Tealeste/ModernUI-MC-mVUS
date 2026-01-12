@@ -67,9 +67,9 @@ This mod also includes utilities that improve performance and day-to-day UX, suc
 - Issues (this fork): [Tealeste/ModernUI-MC-mVUS](https://github.com/Tealeste/ModernUI-MC-mVUS/issues)
 
 ## Compatibility
-- Minecraft: `1.21.10` (Fabric / Forge / NeoForge)
+- Minecraft: `1.21.8`, `1.21.10`, `1.21.11` (Fabric / Forge / NeoForge)
 - Java: `21`
-- Build target: defaults to `minecraft_version=1.21.10`
+- Build target: defaults to `minecraft_version=1.21.11` (override with `-Pminecraft_version=<version>`)
 
 ## For Mod Developers
 ### Gradle repositories
@@ -193,7 +193,7 @@ development, clone `ModernUI` next to this repository and keep both up to date.
 
 - Requirements: JDK `21` (Gradle itself must run on Java 21; newer JDKs like 25 are not supported)
   - If needed, set `JAVA_HOME` when invoking Gradle
-- One-command distributable jars (Fabric / Forge / NeoForge): `./gradlew buildReleaseJars`
+- One-command distributable jars (Fabric / Forge / NeoForge): `./gradlew buildReleaseJars -Pminecraft_version=<mc_version>`
 - Output jars (ready for distribution): `build/release/ModernUI-MC-<mod_version>-{fabric,forge,neoforge}.jar`
 - Run a dev client:
   - Fabric: `./gradlew :ModernUI-Fabric:runClient`
