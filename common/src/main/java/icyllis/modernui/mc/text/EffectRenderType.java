@@ -165,7 +165,7 @@ public final class EffectRenderType {
         TextureManagerCompat.register(
                 Minecraft.getInstance().getTextureManager(),
                 WHITE_TEXTURE_ID,
-                new TextureViewBackedTexture(WHITE_WRAPPER_VIEW, WHITE_SAMPLER)
+                new TextureViewBackedTexture(WHITE_WRAPPER_VIEW)
         );
 
         Supplier<Object> sampler = SamplerCompat.isSupported() ? WHITE_SAMPLER : null;

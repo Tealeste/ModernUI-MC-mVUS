@@ -143,9 +143,9 @@ public class StandardFontSet extends FontSet {
             }
 
             @Override
-            public net.minecraft.client.gui.font.TextRenderable.Styled createGlyph(float x, float y, int color,
-                                                                                   int packedLight, Style style,
-                                                                                   float r, float g) {
+            public net.minecraft.client.gui.font.TextRenderable createGlyph(float x, float y, int color,
+                                                                            int packedLight, Style style,
+                                                                            float r, float g) {
                 return null;
             }
         };
