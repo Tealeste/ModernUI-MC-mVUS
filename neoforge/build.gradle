@@ -9,20 +9,15 @@ plugins {
 version = mod_version as String
 
 def mcPatch = (minecraft_version as String).tokenize('.').last() as int
-def useLegacySources = mcPatch == 8
 def useIdentifierResourceId = mcPatch >= 11
 
 sourceSets {
     main {
         java {
-            if (useLegacySources) {
-                setSrcDirs(['src/legacy/java'])
-            } else {
-                setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
-            }
+            setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
         }
         resources {
-            setSrcDirs([useLegacySources ? 'src/legacy/resources' : 'src/main/resources'])
+            setSrcDirs(['src/main/resources'])
         }
     }
 }

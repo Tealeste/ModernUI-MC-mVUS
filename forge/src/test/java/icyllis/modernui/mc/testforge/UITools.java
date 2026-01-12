@@ -89,21 +89,21 @@ public class UITools {
      * The default arrow cursor.
      */
     public static void useDefaultCursor() {
-        GLFW.glfwSetCursor(Minecraft.getInstance().getWindow().getWindow(), MemoryUtil.NULL);
+        GLFW.glfwSetCursor(Minecraft.getInstance().getWindow().handle(), MemoryUtil.NULL);
     }
 
     /**
      * The text input I-beam cursor.
      */
     public static void useIBeamCursor() {
-        //GLFW.glfwSetCursor(Minecraft.getInstance().getWindow().getWindow(), IBEAM_CURSOR);
+        //GLFW.glfwSetCursor(Minecraft.getInstance().getWindow().handle(), IBEAM_CURSOR);
     }
 
     /**
      * The hand cursor on a link or a web-page button.
      */
     public static void useHandCursor() {
-        //GLFW.glfwSetCursor(Minecraft.getInstance().getWindow().getWindow(), HAND_CURSOR);
+        //GLFW.glfwSetCursor(Minecraft.getInstance().getWindow().handle(), HAND_CURSOR);
     }
 
     /**

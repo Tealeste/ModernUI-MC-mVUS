@@ -29,15 +29,13 @@ dependencies {
     }
 }
 
-def useLegacySources = (minecraft_version as String) == '1.21.8'
-
 sourceSets {
     main {
         java {
-            setSrcDirs([useLegacySources ? 'src/legacy/java' : 'src/main/java'])
+            setSrcDirs(['src/main/java'])
         }
         resources {
-            setSrcDirs([useLegacySources ? 'src/legacy/resources' : 'src/main/resources'])
+            setSrcDirs(['src/main/resources'])
         }
     }
 }
