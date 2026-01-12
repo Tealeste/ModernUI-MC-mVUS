@@ -23,6 +23,7 @@ allprojects {
     java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
     repositories {
+        maven { url = 'https://libraries.minecraft.net/' }
         mavenCentral()
         mavenLocal()
     }
