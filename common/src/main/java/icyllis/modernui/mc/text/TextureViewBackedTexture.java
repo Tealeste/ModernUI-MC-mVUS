@@ -18,42 +18,21 @@
 
 package icyllis.modernui.mc.text;
 
-import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 final class TextureViewBackedTexture extends AbstractTexture {
 
-    private final Supplier<?> samplerSupplier;
-    private volatile GpuSampler cachedSampler;
-
-    TextureViewBackedTexture(@Nonnull GpuTextureView view, @Nonnull Supplier<?> samplerSupplier) {
+    TextureViewBackedTexture(@Nonnull GpuTextureView view) {
         this.textureView = Objects.requireNonNull(view, "view");
         this.texture = view.texture();
-        this.samplerSupplier = Objects.requireNonNull(samplerSupplier, "samplerSupplier");
-        // AbstractTexture.sampler is protected, so we can set it directly without reflection.
-        this.sampler = getSamplerValue();
     }
 
     @Override
     public void close() {
         // Lifetime is managed by the caller.
-    }
-
-    private GpuSampler getSamplerValue() {
-        GpuSampler cached = cachedSampler;
-        if (cached != null) {
-            return cached;
-        }
-        Object value = samplerSupplier.get();
-        if (!(value instanceof GpuSampler sampler)) {
-            return null;
-        }
-        cachedSampler = sampler;
-        return sampler;
     }
 }

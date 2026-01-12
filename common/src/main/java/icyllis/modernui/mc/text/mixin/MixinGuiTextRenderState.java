@@ -217,6 +217,6 @@ public class MixinGuiTextRenderState {
             poseNoTranslation.m21 = 0;
             return bounds.transformMaxBounds(poseNoTranslation);
         }
-        return bounds.transformMaxBounds(pose);
+        return bounds.transformMaxBounds(new Matrix3x2f(pose));
     }
 }

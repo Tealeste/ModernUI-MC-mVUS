@@ -29,7 +29,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.network.chat.FontDescription;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -52,12 +52,12 @@ public final class AtlasSpriteFont implements Font {
     }
 
     @Nonnull
-    public Identifier atlasId() {
+    public ResourceLocation atlasId() {
         return sprite.atlasId();
     }
 
     @Nonnull
-    public Identifier spriteId() {
+    public ResourceLocation spriteId() {
         return sprite.spriteId();
     }
 

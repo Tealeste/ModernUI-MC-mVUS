@@ -18,7 +18,7 @@
 
 package icyllis.modernui.mc;
 
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 
 import java.util.concurrent.Executor;
 

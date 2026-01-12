@@ -303,7 +303,7 @@ public final class TextRenderType {
         }
         id = ModernUIMod.location("internal/text_texture/" + (sNextTextureId++));
         TextureManager textureManager = Minecraft.getInstance().getTextureManager();
-        TextureManagerCompat.register(textureManager, id, new TextureViewBackedTexture(texture, DEFAULT_SAMPLER));
+        TextureManagerCompat.register(textureManager, id, new TextureViewBackedTexture(texture));
         sTextureIds.put(texture, id);
         return id;
     }
