@@ -67,9 +67,9 @@ This mod also includes utilities that improve performance and day-to-day UX, suc
 - Issues (this fork): [Tealeste/ModernUI-MC-mVUS](https://github.com/Tealeste/ModernUI-MC-mVUS/issues)
 
 ## Compatibility
-- Minecraft: `1.21.11` (Fabric / Forge / NeoForge)
+- Minecraft: `1.21.10` (Fabric / Forge / NeoForge)
 - Java: `21`
-- Build target: defaults to `minecraft_version=1.21.11`
+- Build target: defaults to `minecraft_version=1.21.10`
 
 ## For Mod Developers
 ### Gradle repositories
