@@ -21,10 +21,18 @@ build
 # other
 eclipse
 resource
+/config/
 run
+plan
 classes
 *.psd
 *.log
 logs
+.DS_Store
+
+# AI tooling / agent artifacts
+.codex/
+.claude/
+AGENTS.md
 
 forge/src/main/resources/assets/modernui/emoji/a.bat
