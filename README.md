@@ -189,7 +189,7 @@ dependencies {
 - 环境要求：JDK `21`（Gradle 本身需要在 Java 21 下运行；较新的 JDK（如 25）不受支持）
   - 如有需要，请在运行 Gradle 时设置 `JAVA_HOME`
 - 一条命令构建可分发 jar（Fabric / Forge / NeoForge）：`./gradlew buildReleaseJars`
-- 输出位置（可直接用于发布）：`build/release/ModernUI-MC-<mod_version>-{fabric,forge,neoforge}.jar`
+- 输出位置（可直接用于发布）：`build/release/ModernUI-MC-<mod_version>-{fabric,forge,neoforge}.jar`（例如：`build/release/ModernUI-MC-3.12.0.5-build.2+mc1.21.10-{fabric,forge,neoforge}.jar`）
 - 运行开发客户端：
   - Fabric：`./gradlew :ModernUI-Fabric:runClient`
   - Forge：`./gradlew :ModernUI-Forge:runClient`
