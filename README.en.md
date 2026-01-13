@@ -194,7 +194,7 @@ development, clone `ModernUI` next to this repository and keep both up to date.
 - Requirements: JDK `21` (Gradle itself must run on Java 21; newer JDKs like 25 are not supported)
   - If needed, set `JAVA_HOME` when invoking Gradle
 - One-command distributable jars (Fabric / Forge / NeoForge): `./gradlew buildReleaseJars`
-- Output jars (ready for distribution): `build/release/ModernUI-MC-<mod_version>-{fabric,forge,neoforge}.jar`
+- Output jars (ready for distribution): `build/release/ModernUI-MC-<mod_version>-{fabric,forge,neoforge}.jar` (e.g. `build/release/ModernUI-MC-3.12.0.5-build.2+mc1.21.10-{fabric,forge,neoforge}.jar`)
 - Run a dev client:
   - Fabric: `./gradlew :ModernUI-Fabric:runClient`
   - Forge: `./gradlew :ModernUI-Forge:runClient`
