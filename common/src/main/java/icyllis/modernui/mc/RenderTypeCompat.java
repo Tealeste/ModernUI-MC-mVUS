@@ -221,66 +221,34 @@ public final class RenderTypeCompat {
 
     private static final class CompositeStateImpl implements Impl {
 
+        private final Class<?> compositeStateClass;
         private final Method compositeStateBuilderFactory;
-        private final Method compositeStateBuilderSetTextureState;
-        private final Method compositeStateBuilderSetLightmapState;
-        private final Method compositeStateBuilderSetOverlayState;
-        private final Method compositeStateBuilderSetLayeringState;
-        private final Method compositeStateBuilderSetOutputState;
-        private final Method compositeStateBuilderSetTexturingState;
-        private final Method compositeStateBuilderSetLineState;
         private final Method compositeStateBuilderCreate;
+        private final Method[] compositeStateBuilderSetters;
 
-        private final Object noTexture;
-        private final Object lightmap;
-        private final Object noLightmap;
-        private final Object noOverlay;
-        private final Object noLayering;
-        private final Object mainTarget;
-        private final Object defaultTexturing;
-        private final Object defaultLine;
+        private final Object lightmapStateShard;
 
         private final Constructor<?> textureStateShardCtor;
         private final Method renderTypeCreate;
 
         private CompositeStateImpl() {
             try {
-                Class<?> renderTypeClass = Class.forName("net.minecraft.client.renderer.RenderType");
-                Class<?> compositeStateClass = Class.forName("net.minecraft.client.renderer.RenderType$CompositeState");
-                Class<?> compositeStateBuilderClass = Class.forName("net.minecraft.client.renderer.RenderType$CompositeState$CompositeStateBuilder");
+                Class<?> renderTypeClass = requireClass(
+                        "net.minecraft.client.renderer.RenderType",
+                        "net.minecraft.class_1921"
+                );
 
-                compositeStateBuilderFactory = compositeStateClass.getMethod("builder");
-                compositeStateBuilderSetTextureState = compositeStateBuilderClass.getMethod("setTextureState",
-                        Class.forName("net.minecraft.client.renderer.RenderStateShard$EmptyTextureStateShard"));
-                compositeStateBuilderSetLightmapState = compositeStateBuilderClass.getMethod("setLightmapState",
-                        Class.forName("net.minecraft.client.renderer.RenderStateShard$LightmapStateShard"));
-                compositeStateBuilderSetOverlayState = compositeStateBuilderClass.getMethod("setOverlayState",
-                        Class.forName("net.minecraft.client.renderer.RenderStateShard$OverlayStateShard"));
-                compositeStateBuilderSetLayeringState = compositeStateBuilderClass.getMethod("setLayeringState",
-                        Class.forName("net.minecraft.client.renderer.RenderStateShard$LayeringStateShard"));
-                compositeStateBuilderSetOutputState = compositeStateBuilderClass.getMethod("setOutputState",
-                        Class.forName("net.minecraft.client.renderer.RenderStateShard$OutputStateShard"));
-                compositeStateBuilderSetTexturingState = compositeStateBuilderClass.getMethod("setTexturingState",
-                        Class.forName("net.minecraft.client.renderer.RenderStateShard$TexturingStateShard"));
-                compositeStateBuilderSetLineState = compositeStateBuilderClass.getMethod("setLineState",
-                        Class.forName("net.minecraft.client.renderer.RenderStateShard$LineStateShard"));
-                compositeStateBuilderCreate = compositeStateBuilderClass.getMethod("createCompositeState", boolean.class);
+                renderTypeCreate = resolveRenderTypeCreate(renderTypeClass);
+                compositeStateClass = renderTypeCreate.getParameterTypes()[5];
 
-                Class<?> renderStateShardClass = Class.forName("net.minecraft.client.renderer.RenderStateShard");
-                noTexture = getStatic(renderStateShardClass, "NO_TEXTURE");
-                lightmap = getStatic(renderStateShardClass, "LIGHTMAP");
-                noLightmap = getStatic(renderStateShardClass, "NO_LIGHTMAP");
-                noOverlay = getStatic(renderStateShardClass, "NO_OVERLAY");
-                noLayering = getStatic(renderStateShardClass, "NO_LAYERING");
-                mainTarget = getStatic(renderStateShardClass, "MAIN_TARGET");
-                defaultTexturing = getStatic(renderStateShardClass, "DEFAULT_TEXTURING");
-                defaultLine = getStatic(renderStateShardClass, "DEFAULT_LINE");
+                compositeStateBuilderFactory = resolveCompositeStateBuilderFactory(compositeStateClass);
+                Class<?> builderClass = compositeStateBuilderFactory.getReturnType();
+                compositeStateBuilderSetters = resolveCompositeStateBuilderSetters(builderClass);
+                compositeStateBuilderCreate = resolveCompositeStateBuilderCreate(builderClass, compositeStateClass);
 
-                Class<?> textureStateShardClass = Class.forName("net.minecraft.client.renderer.RenderStateShard$TextureStateShard");
-                Class<?> resourceLocationClass = Class.forName("net.minecraft.resources.ResourceLocation");
-                textureStateShardCtor = textureStateShardClass.getConstructor(resourceLocationClass, boolean.class);
-
-                renderTypeCreate = resolveRenderTypeCreate(renderTypeClass, compositeStateClass);
+                Class<?> renderStateShardClass = renderTypeClass.getSuperclass();
+                lightmapStateShard = resolveLightmapStateShard(renderStateShardClass);
+                textureStateShardCtor = resolveTextureStateShardConstructor(renderStateShardClass, compositeStateBuilderSetters);
             } catch (Exception e) {
                 throw new IllegalStateException("Failed to initialize RenderTypeCompat (CompositeState)", e);
             }
@@ -297,13 +265,12 @@ public final class RenderTypeCompat {
                              boolean lightmapEnabled) {
             try {
                 Object builder = compositeStateBuilderFactory.invoke(null);
-                compositeStateBuilderSetTextureState.invoke(builder, texture != null ? textureState(texture) : noTexture);
-                compositeStateBuilderSetLightmapState.invoke(builder, lightmapEnabled ? lightmap : noLightmap);
-                compositeStateBuilderSetOverlayState.invoke(builder, noOverlay);
-                compositeStateBuilderSetLayeringState.invoke(builder, noLayering);
-                compositeStateBuilderSetOutputState.invoke(builder, mainTarget);
-                compositeStateBuilderSetTexturingState.invoke(builder, defaultTexturing);
-                compositeStateBuilderSetLineState.invoke(builder, defaultLine);
+                if (texture != null) {
+                    invokeCompositeStateSetter(builder, textureState(texture));
+                }
+                if (lightmapEnabled) {
+                    invokeCompositeStateSetter(builder, lightmapStateShard);
+                }
                 Object compositeState = compositeStateBuilderCreate.invoke(builder, /*outline*/ false);
 
                 return renderTypeCreate.invoke(null, name, bufferSize, affectsCrumbling, sortOnUpload, renderPipeline, compositeState);
@@ -316,9 +283,14 @@ public final class RenderTypeCompat {
             return textureStateShardCtor.newInstance(texture, /*mipmap*/ false);
         }
 
-        private static Method resolveRenderTypeCreate(Class<?> renderTypeClass, Class<?> compositeStateClass) {
+        private void invokeCompositeStateSetter(Object builder, Object stateShard) throws Exception {
+            Method setter = resolveCompositeStateBuilderSetter(compositeStateBuilderSetters, stateShard.getClass());
+            setter.invoke(builder, stateShard);
+        }
+
+        private static Method resolveRenderTypeCreate(Class<?> renderTypeClass) {
             for (Method method : renderTypeClass.getDeclaredMethods()) {
-                if (!method.getName().equals("create") || method.getParameterCount() != 6) {
+                if (!Modifier.isStatic(method.getModifiers()) || method.getParameterCount() != 6) {
                     continue;
                 }
                 Class<?>[] params = method.getParameterTypes();
@@ -331,7 +303,7 @@ public final class RenderTypeCompat {
                 if (!RenderPipeline.class.isAssignableFrom(params[4])) {
                     continue;
                 }
-                if (params[5] != compositeStateClass) {
+                if (!renderTypeClass.isAssignableFrom(method.getReturnType())) {
                     continue;
                 }
                 method.setAccessible(true);
@@ -340,9 +312,127 @@ public final class RenderTypeCompat {
             throw new IllegalStateException("No compatible RenderType#create(String,int,boolean,boolean,RenderPipeline,CompositeState) overload found");
         }
 
-        private static Object getStatic(Class<?> owner, String fieldName) throws Exception {
-            Field field = owner.getField(fieldName);
-            return field.get(null);
+        private static Method resolveCompositeStateBuilderFactory(Class<?> compositeStateClass) {
+            for (Method method : compositeStateClass.getDeclaredMethods()) {
+                if (!Modifier.isStatic(method.getModifiers()) || method.getParameterCount() != 0) {
+                    continue;
+                }
+                if (method.getReturnType() == void.class) {
+                    continue;
+                }
+                method.setAccessible(true);
+                return method;
+            }
+            throw new IllegalStateException("No compatible RenderType$CompositeState builder factory method found");
+        }
+
+        private static Method[] resolveCompositeStateBuilderSetters(Class<?> builderClass) {
+            Method[] methods = builderClass.getDeclaredMethods();
+            int count = 0;
+            for (Method method : methods) {
+                if (Modifier.isStatic(method.getModifiers())) {
+                    continue;
+                }
+                if (method.getParameterCount() != 1 || method.getReturnType() != builderClass) {
+                    continue;
+                }
+                method.setAccessible(true);
+                count++;
+            }
+            Method[] setters = new Method[count];
+            int i = 0;
+            for (Method method : methods) {
+                if (Modifier.isStatic(method.getModifiers())) {
+                    continue;
+                }
+                if (method.getParameterCount() != 1 || method.getReturnType() != builderClass) {
+                    continue;
+                }
+                setters[i++] = method;
+            }
+            return setters;
+        }
+
+        private static Method resolveCompositeStateBuilderCreate(Class<?> builderClass, Class<?> compositeStateClass) {
+            for (Method method : builderClass.getDeclaredMethods()) {
+                if (Modifier.isStatic(method.getModifiers()) || method.getParameterCount() != 1) {
+                    continue;
+                }
+                if (method.getParameterTypes()[0] != boolean.class || method.getReturnType() != compositeStateClass) {
+                    continue;
+                }
+                method.setAccessible(true);
+                return method;
+            }
+            throw new IllegalStateException("No compatible CompositeStateBuilder#createCompositeState(boolean) method found");
+        }
+
+        private static Method resolveCompositeStateBuilderSetter(Method[] setters, Class<?> stateShardClass) {
+            Method best = null;
+            for (Method method : setters) {
+                Class<?> param = method.getParameterTypes()[0];
+                if (!param.isAssignableFrom(stateShardClass)) {
+                    continue;
+                }
+                if (best == null) {
+                    best = method;
+                    continue;
+                }
+                Class<?> bestParam = best.getParameterTypes()[0];
+                if (bestParam.isAssignableFrom(param)) {
+                    best = method;
+                }
+            }
+            if (best == null) {
+                throw new IllegalStateException("No compatible CompositeStateBuilder setter method found for state shard: " + stateShardClass.getName());
+            }
+            return best;
+        }
+
+        private static Object resolveLightmapStateShard(Class<?> renderStateShardClass) throws Exception {
+            for (Field field : renderStateShardClass.getFields()) {
+                if (!Modifier.isStatic(field.getModifiers())) {
+                    continue;
+                }
+                if (!renderStateShardClass.isAssignableFrom(field.getType())) {
+                    continue;
+                }
+                Object value = field.get(null);
+                if (value == null) {
+                    continue;
+                }
+                String text = String.valueOf(value).toLowerCase();
+                if (!text.contains("lightmap") || !text.contains("true")) {
+                    continue;
+                }
+                return value;
+            }
+            throw new IllegalStateException("No compatible LIGHTMAP RenderStateShard found (enabled=true)");
+        }
+
+        private static Constructor<?> resolveTextureStateShardConstructor(Class<?> renderStateShardClass, Method[] setters) {
+            Class<?> idClass = ResourceIdCompat.idClass();
+            for (Class<?> nestedClass : renderStateShardClass.getDeclaredClasses()) {
+                try {
+                    Constructor<?> ctor = nestedClass.getDeclaredConstructor(idClass, boolean.class);
+                    if (!isAcceptedByAnySetter(setters, nestedClass)) {
+                        continue;
+                    }
+                    ctor.setAccessible(true);
+                    return ctor;
+                } catch (NoSuchMethodException ignored) {
+                }
+            }
+            throw new IllegalStateException("No compatible TextureStateShard(ResourceId,boolean) constructor found");
+        }
+
+        private static boolean isAcceptedByAnySetter(Method[] setters, Class<?> stateShardClass) {
+            for (Method setter : setters) {
+                if (setter.getParameterTypes()[0].isAssignableFrom(stateShardClass)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
