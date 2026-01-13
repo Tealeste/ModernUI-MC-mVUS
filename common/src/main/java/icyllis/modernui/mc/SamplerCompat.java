@@ -9,10 +9,23 @@ import java.lang.reflect.Modifier;
 
 public final class SamplerCompat {
 
+    /**
+     * 1.21.10 and older do not expose a {@code SamplerCache} API and instead store filtering state on {@code GpuTexture}.
+     * This object acts as a minimal cross-version carrier for "sampler intent" (filter + mipmaps) so patch-specific
+     * code can apply it where appropriate (e.g., in {@code TextureSetupCompat}).
+     */
+    public record TextureFilter(FilterMode filterMode, boolean useMipmaps) {
+    }
+
     private static final Method GET_SAMPLER_CACHE = resolveMethod(RenderSystem.class, "getSamplerCache");
     private static final Method CLAMP_TO_EDGE_1;
     private static final Method CLAMP_TO_EDGE_2;
     private static final Method CREATE_SAMPLER;
+
+    private static final boolean HAS_TEXTURE_FILTER_API = hasTextureFilterApi();
+    private static final Object FALLBACK_NEAREST = new TextureFilter(FilterMode.NEAREST, /*useMipmaps*/ false);
+    private static final Object FALLBACK_LINEAR = new TextureFilter(FilterMode.LINEAR, /*useMipmaps*/ false);
+    private static final Object FALLBACK_LINEAR_MIPMAPS = new TextureFilter(FilterMode.LINEAR, /*useMipmaps*/ true);
 
     static {
         Method clamp1 = null;
@@ -33,13 +46,14 @@ public final class SamplerCompat {
     }
 
     public static boolean isSupported() {
-        return GET_SAMPLER_CACHE != null && (CLAMP_TO_EDGE_1 != null || CREATE_SAMPLER != null);
+        boolean samplerCacheSupported = GET_SAMPLER_CACHE != null && (CLAMP_TO_EDGE_1 != null || CREATE_SAMPLER != null);
+        return samplerCacheSupported || HAS_TEXTURE_FILTER_API;
     }
 
     public static Object clampToEdge(FilterMode filterMode) {
         try {
             if (GET_SAMPLER_CACHE == null) {
-                return null;
+                return HAS_TEXTURE_FILTER_API ? fallbackFilter(filterMode, /*useMipmaps*/ false) : null;
             }
             Object cache = GET_SAMPLER_CACHE.invoke(null);
             if (CLAMP_TO_EDGE_1 != null) {
@@ -64,7 +78,7 @@ public final class SamplerCompat {
     public static Object clampToEdge(FilterMode filterMode, boolean useMipmaps) {
         try {
             if (GET_SAMPLER_CACHE == null) {
-                return null;
+                return HAS_TEXTURE_FILTER_API ? fallbackFilter(filterMode, useMipmaps) : null;
             }
             Object cache = GET_SAMPLER_CACHE.invoke(null);
             if (CLAMP_TO_EDGE_2 != null) {
@@ -86,6 +100,27 @@ public final class SamplerCompat {
             return null;
         } catch (Exception e) {
             throw new RuntimeException("Failed to get clamp-to-edge sampler", e);
+        }
+    }
+
+    private static Object fallbackFilter(FilterMode filterMode, boolean useMipmaps) {
+        if (useMipmaps && filterMode == FilterMode.LINEAR) {
+            return FALLBACK_LINEAR_MIPMAPS;
+        }
+        if (filterMode == FilterMode.LINEAR) {
+            return FALLBACK_LINEAR;
+        }
+        return FALLBACK_NEAREST;
+    }
+
+    private static boolean hasTextureFilterApi() {
+        try {
+            Class<?> gpuTexture = Class.forName("com.mojang.blaze3d.textures.GpuTexture");
+            gpuTexture.getMethod("setTextureFilter", FilterMode.class, boolean.class);
+            gpuTexture.getMethod("setAddressMode", AddressMode.class);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 
