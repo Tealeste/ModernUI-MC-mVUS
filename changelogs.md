@@ -1,5 +1,8 @@
 Changelogs
 ===
+### Modern UI 3.12.0.5-build.2+mc1.21.11 — Version bump (2026-01-12)
+* No functional changes; version bump and documentation updates only.
+
 ### Modern UI 3.12.0.5-build.1+mc1.21.11 — 1.21.11 compatibility update (2026-01-03)
 * Update default build target to Minecraft 1.21.11 and validate 1.21.8–1.21.11 across Fabric/Forge/NeoForge
 * Expand loader metadata version ranges to cover `<1.21.12` and update minimum loader requirements
