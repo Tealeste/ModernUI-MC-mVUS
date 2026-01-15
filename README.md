@@ -63,7 +63,7 @@ ModernUI-MC 内置为 Minecraft 量身打造的强大文本布局与渲染系统
 - 问题反馈（本分支） [Tealeste/ModernUI](https://github.com/Tealeste/ModernUI-MC-mVUS/issues)
 
 ## 兼容性
-- Minecraft：`1.21.8`、`1.21.10`、`1.21.11`（Fabric / Forge / NeoForge）
+- Minecraft：`1.21.8`、`1.21.9`、`1.21.10`、`1.21.11`（Fabric / Forge / NeoForge）
 - Java：`21`
 - 构建目标：默认 `minecraft_version=1.21.11`（可用 `-Pminecraft_version=<version>` 覆盖）
 

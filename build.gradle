@@ -12,6 +12,15 @@ ext.modernUiMcProfiles = [
                 modMenu                 : '15.0.0',
                 forgeConfigApiPortFabric: '21.8.1',
         ],
+        '1.21.9' : [
+                modVersionBase           : '3.12.0.5-build.2',
+                forge                   : '59.0.5',
+                neoforge                : '21.9.16-beta',
+                fabricLoader            : '0.18.1',
+                fabricApi               : '0.134.1+1.21.9',
+                modMenu                 : '16.0.0-rc.2',
+                forgeConfigApiPortFabric: '21.9.7',
+        ],
         '1.21.10': [
                 modVersionBase           : '3.12.0.5-build.2',
                 forge                   : '60.1.5',

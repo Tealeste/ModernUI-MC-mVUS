@@ -14,7 +14,7 @@ def useIdentifierResourceId = mcPatch >= 11
 sourceSets {
     main {
         java {
-            if (mcPatch < 10) {
+            if (mcPatch < 9) {
                 setSrcDirs(['src/pre_1_21_10/java'])
             } else {
                 setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
