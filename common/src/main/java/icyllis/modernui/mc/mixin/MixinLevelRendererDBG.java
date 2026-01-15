@@ -42,17 +42,12 @@ import static icyllis.modernui.mc.ModernUIMod.LOGGER;
 public class MixinLevelRendererDBG {
 
     @Inject(method = "renderLevel", at = @At(value = "CONSTANT", args = "stringValue=blockentities", ordinal = 0))
-    private void afterEntities(DeltaTracker deltaTracker, boolean renderBlockOutline,
-                               Camera camera, GameRenderer gameRenderer, LightTexture lightTexture,
-                               Matrix4f modelView, Matrix4f projection, CallbackInfo ci) {
+    private void afterEntities(CallbackInfo ci) {
         Minecraft minecraft = Minecraft.getInstance();
         if (KeyCompat.isAltDown(minecraft.getWindow()) &&
                 KeyCompat.isKeyDown(minecraft.getWindow(), GLFW.GLFW_KEY_KP_7)) {
+            Camera camera = minecraft.gameRenderer.getMainCamera();
             LOGGER.info("Capture from MixinLevelRendererDBG.afterEntities()");
-            LOGGER.info("Param ModelViewMatrix: {}", modelView);
-            LOGGER.info("Param Camera.getPosition(): {}, pitch: {}, yaw: {}, rot: {}, detached: {}",
-                    camera.position(), CameraCompat.xRot(camera), CameraCompat.yRot(camera), camera.rotation(), camera.isDetached());
-            LOGGER.info("Param ProjectionMatrix: {}", projection);
             LOGGER.info("RenderSystem.getModelViewStack(): {}",
                     RenderSystem.getModelViewStack());
             LOGGER.info("RenderSystem.getModelViewMatrix(): {}", RenderSystem.getModelViewMatrix());
@@ -63,7 +58,7 @@ public class MixinLevelRendererDBG {
             if (player != null) {
                 LOGGER.info("LocalPlayer: yaw: {}, yawHead: {}, eyePos: {}",
                         player.getYRot(), player.getYHeadRot(),
-                        player.getEyePosition(deltaTracker.getGameTimeDeltaPartialTick(false)));
+                        player.getEyePosition());
             }
             Entity cameraEntity = minecraft.getCameraEntity();
             if (cameraEntity != null) {

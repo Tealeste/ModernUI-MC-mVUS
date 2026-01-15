@@ -35,7 +35,7 @@ public final class TextureSetupCompat {
 
     public static TextureSetup singleTextureWithLightmap(GpuTextureView view, Object sampler) {
         try {
-            GpuTextureView lightmapView = Minecraft.getInstance().gameRenderer.lightTexture().getTextureView();
+            GpuTextureView lightmapView = resolveLightmapView();
             if (CTOR_VIEWS_AND_SAMPLERS != null) {
                 Object lightmapSampler = SamplerCompat.clampToEdge(FilterMode.LINEAR);
                 return CTOR_VIEWS_AND_SAMPLERS.newInstance(view, null, lightmapView, (GpuSampler) sampler, null, lightmapSampler);
@@ -47,6 +47,17 @@ public final class TextureSetupCompat {
             throw new RuntimeException("Failed to construct TextureSetup (singleTextureWithLightmap)", e);
         }
         throw new IllegalStateException("No compatible TextureSetup constructor found");
+    }
+
+    private static GpuTextureView resolveLightmapView() throws ReflectiveOperationException {
+        Object gameRenderer = Minecraft.getInstance().gameRenderer;
+        try {
+            return (GpuTextureView) gameRenderer.getClass().getMethod("lightmap").invoke(gameRenderer);
+        } catch (NoSuchMethodException ignored) {
+        }
+
+        Object lightTexture = gameRenderer.getClass().getMethod("lightTexture").invoke(gameRenderer);
+        return (GpuTextureView) lightTexture.getClass().getMethod("getTextureView").invoke(lightTexture);
     }
 
     @SuppressWarnings("unchecked")

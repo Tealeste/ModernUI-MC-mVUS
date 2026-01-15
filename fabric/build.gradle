@@ -1,15 +1,135 @@
 import net.fabricmc.loom.task.RemapJarTask
+import org.gradle.api.artifacts.transform.CacheableTransform
+import org.gradle.api.artifacts.transform.InputArtifact
+import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.api.artifacts.transform.TransformOutputs
+import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.Classpath
+
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+
+@CacheableTransform
+abstract class FixAccessWidenerNamespaceTransform implements TransformAction<TransformParameters.None> {
+    @InputArtifact
+    @Classpath
+    abstract Provider<FileSystemLocation> getInputArtifact()
+
+    @Override
+    void transform(TransformOutputs outputs) {
+        File inputFile = inputArtifact.get().asFile
+        File outputFile = outputs.file(inputFile.name)
+
+        boolean needsRewrite = false
+        ZipFile zipFile = new ZipFile(inputFile)
+        try {
+            zipFile.entries().each { ZipEntry entry ->
+                if (needsRewrite) {
+                    return
+                }
+                if (!entry.name.endsWith(".accesswidener")) {
+                    return
+                }
+                String firstLine = zipFile.getInputStream(entry).withCloseable { inputStream ->
+                    byte[] bytes = inputStream.readNBytes(256)
+                    int newLineIndex = -1
+                    for (int i = 0; i < bytes.length; i++) {
+                        if (bytes[i] == (byte) '\n') {
+                            newLineIndex = i
+                            break
+                        }
+                    }
+                    if (newLineIndex < 0) {
+                        return null
+                    }
+                    return new String(bytes, 0, newLineIndex, StandardCharsets.UTF_8).trim()
+                }
+                if (firstLine != null && firstLine ==~ /^accessWidener\s+v\d+\s+official\s*$/) {
+                    needsRewrite = true
+                }
+            }
+        } finally {
+            zipFile.close()
+        }
+
+        if (!needsRewrite) {
+            Files.copy(inputFile.toPath(), outputFile.toPath())
+            return
+        }
+
+        ZipInputStream zipInputStream = new ZipInputStream(inputFile.newInputStream())
+        ZipOutputStream zipOutputStream = new ZipOutputStream(outputFile.newOutputStream())
+        try {
+            ZipEntry entry
+            while ((entry = zipInputStream.nextEntry) != null) {
+                // Avoid invalid signatures if we modify jar contents.
+                if (entry.name.startsWith("META-INF/")) {
+                    String upperName = entry.name.toUpperCase(Locale.ROOT)
+                    if (upperName.endsWith(".SF") || upperName.endsWith(".RSA") || upperName.endsWith(".DSA") || upperName.endsWith(".EC")) {
+                        continue
+                    }
+                }
+
+                byte[] contents = zipInputStream.readAllBytes()
+                if (entry.name.endsWith(".accesswidener")) {
+                    String text = new String(contents, StandardCharsets.UTF_8)
+                    String normalized = text.replaceFirst(/(?m)^accessWidener\s+v(\d+)\s+official\s*$/, 'accessWidener v$1 intermediary')
+                    if (normalized != text) {
+                        contents = normalized.getBytes(StandardCharsets.UTF_8)
+                    }
+                }
+
+                ZipEntry outEntry = new ZipEntry(entry.name)
+                outEntry.time = entry.time
+                zipOutputStream.putNextEntry(outEntry)
+                zipOutputStream.write(contents)
+                zipOutputStream.closeEntry()
+            }
+        } finally {
+            zipOutputStream.close()
+            zipInputStream.close()
+        }
+    }
+}
 
 plugins {
-    id 'dev.architectury.loom' version '1.13.467'
+    id 'dev.architectury.loom' version '1.13-SNAPSHOT'
     //id 'com.matthewprenger.cursegradle' version '1.4.0'
-    id 'com.github.johnrengelman.shadow' version '7.0.0'
+    id 'com.gradleup.shadow' version '9.3.1'
 }
 
 version = mod_version as String
 
-def mcPatch = (minecraft_version as String).tokenize('.').last() as int
-def useIdentifierResourceId = mcPatch >= 11
+def mcPatch = (rootProject.modernUiMcTargetInfo.scheme == 'legacy'
+        ? (rootProject.modernUiMcTargetInfo.patch as int)
+        : Integer.MAX_VALUE)
+def useIdentifierResourceId = rootProject.modernUiMcTargetInfo.scheme != 'legacy' || mcPatch >= 11
+def identityMappingsFile = new File(rootProject.buildDir, "loom/identity-${minecraft_version}.tiny")
+if (rootProject.modernUiMcTargetInfo.scheme != 'legacy') {
+    identityMappingsFile.parentFile.mkdirs()
+    identityMappingsFile.text = "tiny\t2\t0\tofficial\tnamed\n"
+
+    def artifactType = Attribute.of("artifactType", String)
+    def awFixedJarType = "modernui-awfixed-jar"
+    dependencies {
+        registerTransform(FixAccessWidenerNamespaceTransform) {
+            from.attribute(artifactType, "jar")
+            to.attribute(artifactType, awFixedJarType)
+        }
+    }
+    configurations.configureEach { config ->
+        if (config.name.startsWith("mod")) {
+            config.attributes.attribute(artifactType, awFixedJarType)
+        }
+    }
+}
 
 sourceSets {
     main {
@@ -33,6 +153,11 @@ configurations {
 loom {
     silentMojangMappingsLicense()
     accessWidenerPath = file("src/main/resources/modernui.accesswidener")
+    if (rootProject.modernUiMcTargetInfo.scheme != 'legacy') {
+        // Minecraft 26.1+ ships unobfuscated; do not use intermediary remapping.
+        noIntermediateMappings()
+        enableTransitiveAccessWideners.set(false)
+    }
     runConfigs.each { it.setIdeConfigGenerated(true) } // Uncomment this if run configs not generated
     addTaskBeforeRun(":${name}:classes")
 }
@@ -67,7 +192,15 @@ repositories {
 
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings loom.officialMojangMappings()
+    if (rootProject.modernUiMcTargetInfo.scheme == 'legacy') {
+        mappings loom.officialMojangMappings()
+    } else {
+        mappings loom.layered {
+            mappings(identityMappingsFile) {
+                mergeNamespace('official')
+            }
+        }
+    }
 
     modImplementation "net.fabricmc:fabric-loader:${rootProject.modernUiMcProfile.fabricLoader}"
     modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.modernUiMcProfile.fabricApi}"

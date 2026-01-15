@@ -20,9 +20,6 @@ package icyllis.modernui.mc.fabric;
 
 import icyllis.modernui.fragment.Fragment;
 import icyllis.modernui.mc.*;
-import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
-import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
-import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -49,11 +46,9 @@ import java.util.Objects;
  * }</pre>
  *
  * @see ServerPlayer#openMenu(MenuProvider)
- * @see ExtendedScreenHandlerFactory
  */
 @FunctionalInterface
-public interface MenuScreenFactory<T extends AbstractContainerMenu> extends
-        MenuScreens.ScreenConstructor<T, AbstractContainerScreen<T>> {
+public interface MenuScreenFactory<T extends AbstractContainerMenu> {
 
     /**
      * Helper method that down-casts the screen factory.
@@ -67,7 +62,6 @@ public interface MenuScreenFactory<T extends AbstractContainerMenu> extends
     }
 
     @Nonnull
-    @Override
     default AbstractContainerScreen<T> create(@Nonnull T menu,
                                               @Nonnull Inventory inventory,
                                               @Nonnull Component title) {

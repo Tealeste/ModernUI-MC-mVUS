@@ -1,15 +1,26 @@
 import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
-    id 'dev.architectury.loom' version '1.13.467'
+    id 'dev.architectury.loom' version '1.13-SNAPSHOT' apply false
     //id 'com.matthewprenger.cursegradle' version '1.4.0'
-    id 'com.github.johnrengelman.shadow' version '7.0.0'
+    id 'com.gradleup.shadow' version '9.3.1' apply false
 }
 
 version = mod_version as String
 
-def mcPatch = (minecraft_version as String).tokenize('.').last() as int
-def useIdentifierResourceId = mcPatch >= 11
+if (rootProject.modernUiMcProfile.forge == null) {
+    logger.lifecycle("Skipping :ModernUI-Forge for minecraft_version=${minecraft_version} (no Forge profile available).")
+    tasks.configureEach { it.enabled = false }
+    return
+}
+
+apply plugin: 'dev.architectury.loom'
+apply plugin: 'com.gradleup.shadow'
+
+def mcPatch = (rootProject.modernUiMcTargetInfo.scheme == 'legacy'
+        ? (rootProject.modernUiMcTargetInfo.patch as int)
+        : Integer.MAX_VALUE)
+def useIdentifierResourceId = rootProject.modernUiMcTargetInfo.scheme != 'legacy' || mcPatch >= 11
 
 sourceSets {
     main {

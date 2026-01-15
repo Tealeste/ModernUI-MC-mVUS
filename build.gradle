@@ -39,22 +39,58 @@ ext.modernUiMcProfiles = [
                 modMenu                 : '17.0.0-beta.1',
                 forgeConfigApiPortFabric: '21.11.1',
         ],
+        '26.1-snapshot-1': [
+                modVersionBase           : '3.12.0.5-build.2',
+                // NOTE: Forge/NeoForge support for 26.1 snapshots is not available in this repo yet.
+                fabricLoader            : '0.18.4',
+                fabricApi               : '0.141.3+26.1',
+                modMenu                 : '18.0.0-alpha.4',
+                forgeConfigApiPortFabric: '21.11.1',
+        ],
 ]
 
-ext.modernUiMcTarget = (findProperty('minecraft_version') ?: '1.21.11') as String
+ext.modernUiMcTarget = (findProperty('minecraft_version') ?: '26.1-snapshot-1') as String
+def parseMcTarget = { String mcVersion ->
+    def legacy = (mcVersion =~ /^(\d+)\.(\d+)\.(\d+)$/)
+    if (legacy.matches()) {
+        return [
+                scheme: 'legacy',
+                major : legacy[0][1] as int,
+                minor : legacy[0][2] as int,
+                patch : legacy[0][3] as int,
+        ]
+    }
+
+    def snapshot = (mcVersion =~ /^(\d+)\.(\d+)-snapshot-(\d+)$/)
+    if (snapshot.matches()) {
+        return [
+                scheme: 'snapshot',
+                major : snapshot[0][1] as int,
+                minor : snapshot[0][2] as int,
+                patch : snapshot[0][3] as int, // snapshot number
+        ]
+    }
+
+    return [scheme: 'unknown']
+}
+
 if (!ext.modernUiMcProfiles.containsKey(ext.modernUiMcTarget)) {
     def supportedMcVersions = ext.modernUiMcProfiles.keySet().toList().sort { a, b ->
-        def pa = a.tokenize('.').collect { it as int }
-        def pb = b.tokenize('.').collect { it as int }
-        def c0 = pa[0] <=> pb[0]
+        def pa = parseMcTarget(a)
+        def pb = parseMcTarget(b)
+        if (pa.scheme == 'unknown' || pb.scheme == 'unknown') {
+            return a <=> b
+        }
+
+        def c0 = pa.major <=> pb.major
         if (c0 != 0) {
             return c0
         }
-        def c1 = pa[1] <=> pb[1]
+        def c1 = pa.minor <=> pb.minor
         if (c1 != 0) {
             return c1
         }
-        pa[2] <=> pb[2]
+        pa.patch <=> pb.patch
     }
     throw new GradleException(
             "Unsupported minecraft_version='${ext.modernUiMcTarget}'. Supported: ${supportedMcVersions.join(', ')}. " +
@@ -63,14 +99,22 @@ if (!ext.modernUiMcProfiles.containsKey(ext.modernUiMcTarget)) {
 }
 ext.modernUiMcProfile = ext.modernUiMcProfiles[ext.modernUiMcTarget]
 
-def mcTokens = ext.modernUiMcTarget.tokenize('.')
-if (mcTokens.size() != 3 || !mcTokens[2].isInteger()) {
-    throw new GradleException("Invalid minecraft_version='${ext.modernUiMcTarget}'. Expected format: <major>.<minor>.<patch> (e.g. 1.21.11)")
+def mcTargetInfo = parseMcTarget(ext.modernUiMcTarget)
+ext.modernUiMcTargetInfo = mcTargetInfo
+ext.modernUiJavaRelease = mcTargetInfo.scheme == 'snapshot' ? 25 : 21
+if (mcTargetInfo.scheme == 'legacy') {
+    ext.modernUiMcTargetNext = "${mcTargetInfo.major}.${mcTargetInfo.minor}.${mcTargetInfo.patch + 1}"
+} else if (mcTargetInfo.scheme == 'snapshot') {
+    ext.modernUiMcTargetNext = "${mcTargetInfo.major}.${mcTargetInfo.minor}-snapshot-${mcTargetInfo.patch + 1}"
+} else {
+    throw new GradleException(
+            "Invalid minecraft_version='${ext.modernUiMcTarget}'. Supported formats: " +
+                    "<major>.<minor>.<patch> (e.g. 1.21.11) or <year>.<cycle>-snapshot-<n> (e.g. 26.1-snapshot-1)"
+    )
 }
-ext.modernUiMcTargetNext = "${mcTokens[0]}.${mcTokens[1]}.${(mcTokens[2] as int) + 1}"
 ext.modernUiMcVersionRangeFabric = ">=${ext.modernUiMcTarget} <${ext.modernUiMcTargetNext}"
 ext.modernUiMcVersionRangeToml = "[${ext.modernUiMcTarget}, ${ext.modernUiMcTargetNext})"
-ext.modernUiForgeFmlMajor = (ext.modernUiMcProfile.forge as String).tokenize('.')[0]
+ext.modernUiForgeFmlMajor = ext.modernUiMcProfile.forge == null ? null : (ext.modernUiMcProfile.forge as String).tokenize('.')[0]
 ext.modernUiFabricApiMin = (ext.modernUiMcProfile.fabricApi as String).tokenize('+')[0]
 
 def modVersionBase = (ext.modernUiMcProfile.modVersionBase ?: findProperty('mod_version_base') ?: findProperty('mod_version')) as String
@@ -103,7 +147,7 @@ allprojects {
 
     group = 'icyllis.modernui'
 
-    java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+    java.toolchain.languageVersion = JavaLanguageVersion.of(rootProject.modernUiJavaRelease as int)
 
     repositories {
         // Mojang-hosted artifacts (e.g., LWJGL *-natives-*-patch)
@@ -163,7 +207,7 @@ allprojects {
 
     tasks.withType(JavaCompile).configureEach {
         it.options.encoding = "UTF-8"
-        it.options.release.set(21)
+        it.options.release.set(rootProject.modernUiJavaRelease as int)
     }
 
     java {
@@ -182,6 +226,8 @@ def releaseModVersion = mod_version
 def fabricProject = project(':ModernUI-Fabric')
 def forgeProject = project(':ModernUI-Forge')
 def neoForgeProject = project(':ModernUI-NeoForge')
+def supportsForge = rootProject.modernUiMcProfile.forge != null
+def supportsNeoForge = rootProject.modernUiMcProfile.neoforge != null
 
 def fabricUniversalJar = fabricProject.layout.buildDirectory.file("libs/${fabricProject.name}-${releaseModVersion}-universal.jar")
 def forgeUniversalJar = forgeProject.layout.buildDirectory.file("libs/${forgeProject.name}-${releaseModVersion}-universal.jar")
@@ -189,32 +235,46 @@ def neoForgeUniversalJar = neoForgeProject.layout.buildDirectory.file("libs/${ne
 
 tasks.register('syncReleaseJars', Sync) {
     group = 'distribution'
-    description = 'Builds and collects Fabric/Forge/NeoForge distributable jars into build/release.'
+    description = 'Builds and collects distributable jars into build/release.'
 
-    dependsOn(
+    def remapJarTasks = [
             ':ModernUI-Fabric:remapJar',
-            ':ModernUI-Forge:remapJar',
-            ':ModernUI-NeoForge:remapJar'
-    )
+    ]
+    if (supportsForge) {
+        remapJarTasks.add(':ModernUI-Forge:remapJar')
+    }
+    if (supportsNeoForge) {
+        remapJarTasks.add(':ModernUI-NeoForge:remapJar')
+    }
+    dependsOn(remapJarTasks)
 
     into(releaseDir)
 
     from(fabricUniversalJar) {
         rename { "${rootProject.name}-${releaseModVersion}-fabric.jar" }
     }
-    from(forgeUniversalJar) {
-        rename { "${rootProject.name}-${releaseModVersion}-forge.jar" }
+    if (supportsForge) {
+        from(forgeUniversalJar) {
+            rename { "${rootProject.name}-${releaseModVersion}-forge.jar" }
+        }
     }
-    from(neoForgeUniversalJar) {
-        rename { "${rootProject.name}-${releaseModVersion}-neoforge.jar" }
+    if (supportsNeoForge) {
+        from(neoForgeUniversalJar) {
+            rename { "${rootProject.name}-${releaseModVersion}-neoforge.jar" }
+        }
     }
 
     doFirst {
-        [
+        def expectedJars = [
                 fabricUniversalJar.get().asFile,
-                forgeUniversalJar.get().asFile,
-                neoForgeUniversalJar.get().asFile,
-        ].each { File jarFile ->
+        ]
+        if (supportsForge) {
+            expectedJars.add(forgeUniversalJar.get().asFile)
+        }
+        if (supportsNeoForge) {
+            expectedJars.add(neoForgeUniversalJar.get().asFile)
+        }
+        expectedJars.each { File jarFile ->
             if (!jarFile.exists()) {
                 throw new GradleException("Expected release jar was not produced: ${jarFile}")
             }

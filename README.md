@@ -63,9 +63,13 @@ ModernUI-MC 内置为 Minecraft 量身打造的强大文本布局与渲染系统
 - 问题反馈（本分支） [Tealeste/ModernUI](https://github.com/Tealeste/ModernUI-MC-mVUS/issues)
 
 ## 兼容性
-- Minecraft：`1.21.8`、`1.21.9`、`1.21.10`、`1.21.11`（Fabric / Forge / NeoForge）
-- Java：`21`
-- 构建目标：默认 `minecraft_version=1.21.11`（可用 `-Pminecraft_version=<version>` 覆盖）
+- Minecraft：
+  - `26.1-snapshot-1`（**Java Edition 26.1 Snapshot 1**）— Fabric
+  - `1.21.8`、`1.21.9`、`1.21.10`、`1.21.11`（Fabric / Forge / NeoForge）
+- Java：
+  - `25` 用于 `26.1-snapshot-1`（Gradle 必须运行在 Java 25）
+  - `21` 用于 `1.21.8`–`1.21.11`
+- 构建目标：默认 `minecraft_version=26.1-snapshot-1`（可用 `-Pminecraft_version=<version>` 覆盖）
 
 ## 面向模组开发者
 ### Gradle 仓库
@@ -186,9 +190,13 @@ dependencies {
 当检测到 `../ModernUI` 存在时，ModernUI-MC 会使用 composite build（见 `settings.gradle`）。若你需要进行框架开发，
 请将 `ModernUI` 仓库克隆到本仓库同级目录，并保持二者同步更新。
 
-- 环境要求：JDK `21`（Gradle 本身需要在 Java 21 下运行；较新的 JDK（如 25）不受支持）
+- 环境要求：
+  - 快照目标（`minecraft_version=26.1-snapshot-1`）：JDK `25`（Gradle 必须运行在 Java 25）
+  - 旧版本目标（`1.21.8`–`1.21.11`）：JDK `21`
   - 如有需要，请在运行 Gradle 时设置 `JAVA_HOME`
-- 一条命令构建可分发 jar（Fabric / Forge / NeoForge）：`./gradlew buildReleaseJars -Pminecraft_version=<mc_version>`（默认：`1.21.11`）
+- 一条命令构建可分发 jar：
+  - Fabric：`./gradlew buildReleaseJars -Pminecraft_version=<mc_version>`（默认：`26.1-snapshot-1`）
+  - Forge / NeoForge：使用 `-Pminecraft_version=1.21.11`（26.1 快照目前仅提供 Fabric 配置）
 - 输出位置（可直接用于发布）：`build/release/ModernUI-MC-<mod_version>-{fabric,forge,neoforge}.jar`
 - 运行开发客户端：
   - Fabric：`./gradlew :ModernUI-Fabric:runClient`
