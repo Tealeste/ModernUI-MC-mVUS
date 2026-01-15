@@ -1,15 +1,225 @@
 import net.fabricmc.loom.task.RemapJarTask
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import org.gradle.api.artifacts.transform.CacheableTransform
+import org.gradle.api.artifacts.transform.InputArtifact
+import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.api.artifacts.transform.TransformOutputs
+import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.Classpath
+
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+
+@CacheableTransform
+abstract class FixNeoformConfigTransform implements TransformAction<TransformParameters.None> {
+    @InputArtifact
+    @Classpath
+    abstract Provider<FileSystemLocation> getInputArtifact()
+
+    @Override
+    void transform(TransformOutputs outputs) {
+        File inputFile = inputArtifact.get().asFile
+        File outputFile = outputs.file(inputFile.name)
+
+        ZipFile zipFile = new ZipFile(inputFile)
+        ZipEntry configEntry = zipFile.getEntry("config.json")
+        if (configEntry == null) {
+            zipFile.close()
+            Files.copy(inputFile.toPath(), outputFile.toPath())
+            return
+        }
+
+        String configText = zipFile.getInputStream(configEntry).withCloseable { inputStream ->
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8)
+        }
+        zipFile.close()
+
+        Map<?, ?> parsed = (Map<?, ?>) new JsonSlurper().parseText(configText)
+        Map<String, Object> updated = new LinkedHashMap<>()
+        updated.putAll(parsed)
+
+        Object dataObj = updated.get("data")
+        Map<String, Object> data = (dataObj instanceof Map) ? new LinkedHashMap<>((Map) dataObj) : new LinkedHashMap<>()
+        if (!data.containsKey("mappings")) {
+            // NeoForm spec 6 for unobfuscated versions omits mappings entirely; Loom still expects a path.
+            data.put("mappings", "config/joined.tsrg")
+        }
+        updated.put("data", data)
+        updated.putIfAbsent("official", true)
+
+        Object functionsObj = updated.get("functions")
+        Map<String, Object> functions = (functionsObj instanceof Map) ? new LinkedHashMap<>((Map) functionsObj) : new LinkedHashMap<>()
+
+        Object stepsObj = updated.get("steps")
+        if (stepsObj instanceof Map) {
+            Map<String, Object> steps = new LinkedHashMap<>((Map) stepsObj)
+            Object joinedObj = steps.get("joined")
+            if (joinedObj instanceof List) {
+                List<Object> joinedSteps = new ArrayList<>((List) joinedObj)
+                boolean hasRename = joinedSteps.any { Object stepObj ->
+                    if (!(stepObj instanceof Map)) {
+                        return false
+                    }
+                    Map<?, ?> step = (Map) stepObj
+                    return step.get("type") == "rename" || step.get("name") == "rename"
+                }
+
+                if (!hasRename) {
+                    int preProcessJarIndex = joinedSteps.findIndexOf { Object stepObj ->
+                        if (!(stepObj instanceof Map)) {
+                            return false
+                        }
+                        Map<?, ?> step = (Map) stepObj
+                        return step.get("type") == "preProcessJar" || step.get("name") == "preProcessJar"
+                    }
+
+                    if (preProcessJarIndex >= 0) {
+                        // Minecraft 26.1+ jars ship unobfuscated; we do not need a rename/ART step. Loom still enqueues
+                        // a "rename" stage for Forge-like environments, so we alias the preProcessJar output to "rename".
+                        Map<String, Object> preProcessJarStep = (Map) joinedSteps.get(preProcessJarIndex)
+                        preProcessJarStep.put("name", "rename")
+
+                        joinedSteps.each { Object stepObj ->
+                            if (!(stepObj instanceof Map)) {
+                                return
+                            }
+                            Map<String, Object> step = (Map) stepObj
+                            step.keySet().toList().each { Object keyObj ->
+                                String key = keyObj as String
+                                Object value = step.get(key)
+                                if (value instanceof String && ((String) value).contains("{preProcessJarOutput}")) {
+                                    step.put(key, ((String) value).replace("{preProcessJarOutput}", "{renameOutput}"))
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback: treat client jar as the "rename" output.
+                        joinedSteps.add([
+                                type: "downloadClient",
+                                name: "rename",
+                        ])
+                    }
+
+                    steps.put("joined", joinedSteps)
+                    updated.put("steps", steps)
+                }
+            }
+        }
+
+        functions.keySet().toList().each { String name ->
+            Object functionObj = functions.get(name)
+            if (!(functionObj instanceof Map)) {
+                return
+            }
+            Map<String, Object> function = new LinkedHashMap<>((Map) functionObj)
+            if (!function.containsKey("version")) {
+                Object classpathObj = function.get("classpath")
+                if (classpathObj instanceof List && !((List) classpathObj).isEmpty()) {
+                    Object first = ((List) classpathObj).get(0)
+                    if (first instanceof String) {
+                        function.put("version", first)
+                    }
+                }
+            }
+            function.putIfAbsent("repo", null)
+            functions.put(name, function)
+        }
+        updated.put("functions", functions)
+
+        String updatedConfig = JsonOutput.prettyPrint(JsonOutput.toJson(updated)) + System.lineSeparator()
+
+        boolean hasMappingsFile = false
+        ZipFile zipFile2 = new ZipFile(inputFile)
+        try {
+            hasMappingsFile = (zipFile2.getEntry("config/joined.tsrg") != null)
+        } finally {
+            zipFile2.close()
+        }
+
+        ZipInputStream zipInputStream = new ZipInputStream(inputFile.newInputStream())
+        ZipOutputStream zipOutputStream = new ZipOutputStream(outputFile.newOutputStream())
+        try {
+            ZipEntry entry
+            while ((entry = zipInputStream.nextEntry) != null) {
+                byte[] contents = zipInputStream.readAllBytes()
+                if (entry.name == "config.json") {
+                    contents = updatedConfig.getBytes(StandardCharsets.UTF_8)
+                }
+
+                ZipEntry outEntry = new ZipEntry(entry.name)
+                outEntry.time = entry.time
+                zipOutputStream.putNextEntry(outEntry)
+                zipOutputStream.write(contents)
+                zipOutputStream.closeEntry()
+            }
+
+            if (!hasMappingsFile) {
+                ZipEntry mappingsEntry = new ZipEntry("config/joined.tsrg")
+                zipOutputStream.putNextEntry(mappingsEntry)
+                zipOutputStream.write("tsrg2 obf srg\n".getBytes(StandardCharsets.UTF_8))
+                zipOutputStream.closeEntry()
+            }
+        } finally {
+            zipOutputStream.close()
+            zipInputStream.close()
+        }
+    }
+}
 
 plugins {
-    id 'dev.architectury.loom' version '1.13.467'
+    id 'dev.architectury.loom' version '1.13-SNAPSHOT' apply false
     //id 'com.matthewprenger.cursegradle' version '1.4.0'
-    id 'com.github.johnrengelman.shadow' version '7.0.0'
+    id 'com.gradleup.shadow' version '9.3.1' apply false
 }
 
 version = mod_version as String
 
-def mcPatch = (minecraft_version as String).tokenize('.').last() as int
-def useIdentifierResourceId = mcPatch >= 11
+if (rootProject.modernUiMcProfile.neoforge == null) {
+    logger.lifecycle("Skipping :ModernUI-NeoForge for minecraft_version=${minecraft_version} (no NeoForge profile available).")
+    tasks.configureEach { it.enabled = false }
+    return
+}
+
+apply plugin: 'dev.architectury.loom'
+apply plugin: 'com.gradleup.shadow'
+
+def mcPatch = (rootProject.modernUiMcTargetInfo.scheme == 'legacy'
+        ? (rootProject.modernUiMcTargetInfo.patch as int)
+        : Integer.MAX_VALUE)
+def useIdentifierResourceId = rootProject.modernUiMcTargetInfo.scheme != 'legacy' || mcPatch >= 11
+def identityMappingsFile = new File(rootProject.buildDir, "loom/identity-${minecraft_version}.tiny")
+if (rootProject.modernUiMcTargetInfo.scheme != 'legacy') {
+    identityMappingsFile.parentFile.mkdirs()
+    identityMappingsFile.text = "tiny\t2\t0\tofficial\tnamed\n"
+
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == "org.ow2.asm") {
+                details.useVersion("9.9.1")
+            }
+        }
+    }
+
+    def artifactType = Attribute.of("artifactType", String)
+    def fixedArtifactsType = "modernui-neoform-fixed"
+    dependencies {
+        registerTransform(FixNeoformConfigTransform) {
+            from.attribute(artifactType, "zip")
+            to.attribute(artifactType, fixedArtifactsType)
+        }
+    }
+    configurations.named("mcp").configure {
+        attributes.attribute(artifactType, fixedArtifactsType)
+    }
+}
 
 sourceSets {
     main {
@@ -32,6 +242,10 @@ configurations {
 
 loom {
     silentMojangMappingsLicense()
+    if (rootProject.modernUiMcTargetInfo.scheme != 'legacy') {
+        // Minecraft 26.1+ ships unobfuscated; do not use intermediary remapping.
+        noIntermediateMappings()
+    }
     runConfigs.each { it.setIdeConfigGenerated(true) } // Uncomment this if run configs not generated
     addTaskBeforeRun(":${name}:classes")
 }
@@ -59,7 +273,15 @@ repositories {
 
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings loom.officialMojangMappings()
+    if (rootProject.modernUiMcTargetInfo.scheme == 'legacy') {
+        mappings loom.officialMojangMappings()
+    } else {
+        mappings loom.layered {
+            mappings(identityMappingsFile) {
+                mergeNamespace('official')
+            }
+        }
+    }
     neoForge "net.neoforged:neoforge:${rootProject.modernUiMcProfile.neoforge}"
 
     compileOnly project(':common')

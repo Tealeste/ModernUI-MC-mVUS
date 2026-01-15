@@ -11,8 +11,15 @@ repositories {
     }
 }
 
-minivan {
-    version(minecraft_version)
+if (rootProject.modernUiMcTargetInfo.scheme == 'legacy') {
+    minivan {
+        version(minecraft_version)
+    }
+} else {
+    // 26.1+ Minecraft versions ship unobfuscated and do not provide official mapping downloads.
+    // The loader projects provide the actual Minecraft dev environment for those versions.
+    tasks.withType(JavaCompile).configureEach { enabled = false }
+    tasks.withType(Jar).configureEach { enabled = false }
 }
 
 dependencies {
@@ -32,12 +39,19 @@ dependencies {
 sourceSets {
     main {
         java {
-            def mcPatch = (minecraft_version as String).tokenize('.').last() as int
+            def mcPatch = (rootProject.modernUiMcTargetInfo.scheme == 'legacy'
+                    ? (rootProject.modernUiMcTargetInfo.patch as int)
+                    : Integer.MAX_VALUE)
             if (mcPatch < 9) {
                 setSrcDirs(['src/pre_1_21_10/java'])
             } else {
-                def useIdentifierResourceId = mcPatch >= 11
+                def useIdentifierResourceId = rootProject.modernUiMcTargetInfo.scheme != 'legacy' || mcPatch >= 11
                 setSrcDirs(['src/main/java', useIdentifierResourceId ? 'src/identifier/java' : 'src/pre_1_21_11/java'])
+                if (rootProject.modernUiMcTargetInfo.scheme != 'legacy') {
+                    srcDir('src/26_1/java')
+                    exclude 'icyllis/modernui/mc/mixin/MixinSelectionList.java'
+                    exclude 'icyllis/modernui/mc/text/mixin/MixinLevelRenderer.java'
+                }
             }
         }
         resources {

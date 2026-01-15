@@ -21,11 +21,12 @@ package icyllis.modernui.mc.text;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import icyllis.modernui.ModernUI;
 import icyllis.modernui.graphics.text.Font;
 import icyllis.modernui.mc.ModernUIMod;
 import icyllis.modernui.mc.UtilCompat;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.arguments.ComponentArgument;
@@ -40,10 +41,13 @@ public class MuiTextCommand {
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher,
                                 CommandBuildContext context) {
-        dispatcher.register(ClientCommandManager.literal(ModernUI.ID)
-                .then(ClientCommandManager.literal("text")
-                        .then(ClientCommandManager.literal("layout")
-                                .then(ClientCommandManager.argument("message", ComponentArgument.textComponent(context))
+        dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal(ModernUI.ID)
+                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("text")
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("layout")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, Component>argument(
+                                        "message",
+                                        ComponentArgument.textComponent(context)
+                                )
                                         .executes(ctx -> {
                                             layout(
                                                     ctx.getSource(),
@@ -53,9 +57,14 @@ public class MuiTextCommand {
                                         })
                                 )
                         )
-                        .then(ClientCommandManager.literal("splitLines")
-                                .then(ClientCommandManager.argument("width", FloatArgumentType.floatArg(0))
-                                        .then(ClientCommandManager.argument("message", ComponentArgument.textComponent(context))
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("splitLines")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, Float>argument(
+                                        "width",
+                                        FloatArgumentType.floatArg(0)
+                                ).then(RequiredArgumentBuilder.<FabricClientCommandSource, Component>argument(
+                                        "message",
+                                        ComponentArgument.textComponent(context)
+                                )
                                                 .executes(ctx -> {
                                                     splitLines(
                                                             ctx.getSource(),

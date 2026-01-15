@@ -487,7 +487,7 @@ public final class TooltipRenderer implements ScrollController.IListener {
             FormattedText text = texts.get(i);
             if (text != null)
                 ModernFontRenderer.drawText(text, tooltipX, tooltipY, color, true, mat, source,
-                        false, 0, LightTexture.FULL_BRIGHT);
+                        false, 0, LightCompat.FULL_BRIGHT);
             if (i + 1 == titleLinesCount) {
                 tooltipY += TITLE_GAP;
             }

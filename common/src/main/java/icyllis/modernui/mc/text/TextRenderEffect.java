@@ -18,8 +18,8 @@
 
 package icyllis.modernui.mc.text;
 
+import icyllis.modernui.mc.LightCompat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.LightTexture;
 import org.joml.Matrix3x2f;
 import org.joml.Matrix4f;
 
@@ -85,19 +85,19 @@ public class TextRenderEffect {
         builder.addVertexWith2DPose(pose, start, baseline + UNDERLINE_THICKNESS)
                 .setColor(r, g, b, a)
                 .setUv(0, 1)
-                .setLight(LightTexture.FULL_BRIGHT);
+                .setLight(LightCompat.FULL_BRIGHT);
         builder.addVertexWith2DPose(pose, end, baseline + UNDERLINE_THICKNESS)
                 .setColor(r, g, b, a)
                 .setUv(1, 1)
-                .setLight(LightTexture.FULL_BRIGHT);
+                .setLight(LightCompat.FULL_BRIGHT);
         builder.addVertexWith2DPose(pose, end, baseline)
                 .setColor(r, g, b, a)
                 .setUv(1, 0)
-                .setLight(LightTexture.FULL_BRIGHT);
+                .setLight(LightCompat.FULL_BRIGHT);
         builder.addVertexWith2DPose(pose, start, baseline)
                 .setColor(r, g, b, a)
                 .setUv(0, 0)
-                .setLight(LightTexture.FULL_BRIGHT);
+                .setLight(LightCompat.FULL_BRIGHT);
     }
 
     public static void drawUnderline(@Nonnull Matrix4f matrix, @Nonnull VertexConsumer builder,
@@ -129,19 +129,19 @@ public class TextRenderEffect {
         builder.addVertexWith2DPose(pose, start, baseline + STRIKETHROUGH_THICKNESS)
                 .setColor(r, g, b, a)
                 .setUv(0, 1)
-                .setLight(LightTexture.FULL_BRIGHT);
+                .setLight(LightCompat.FULL_BRIGHT);
         builder.addVertexWith2DPose(pose, end, baseline + STRIKETHROUGH_THICKNESS)
                 .setColor(r, g, b, a)
                 .setUv(1, 1)
-                .setLight(LightTexture.FULL_BRIGHT);
+                .setLight(LightCompat.FULL_BRIGHT);
         builder.addVertexWith2DPose(pose, end, baseline)
                 .setColor(r, g, b, a)
                 .setUv(1, 0)
-                .setLight(LightTexture.FULL_BRIGHT);
+                .setLight(LightCompat.FULL_BRIGHT);
         builder.addVertexWith2DPose(pose, start, baseline)
                 .setColor(r, g, b, a)
                 .setUv(0, 0)
-                .setLight(LightTexture.FULL_BRIGHT);
+                .setLight(LightCompat.FULL_BRIGHT);
     }
 
     public static void drawStrikethrough(@Nonnull Matrix4f matrix, @Nonnull VertexConsumer builder,

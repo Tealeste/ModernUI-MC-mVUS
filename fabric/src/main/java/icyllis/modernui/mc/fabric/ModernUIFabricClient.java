@@ -35,7 +35,6 @@ import net.fabricmc.api.*;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
 import net.fabricmc.fabric.api.resource.*;
@@ -84,12 +83,32 @@ public class ModernUIFabricClient extends ModernUIClient implements ClientModIni
         super();
     }
 
+    private static void registerKeyMapping(KeyMapping keyMapping) {
+        try {
+            Class<?> helper = Class.forName("net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper");
+            helper.getMethod("registerKeyMapping", KeyMapping.class).invoke(null, keyMapping);
+            return;
+        } catch (ClassNotFoundException ignored) {
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to register key mapping", e);
+        }
+
+        try {
+            Class<?> helper = Class.forName("net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper");
+            helper.getMethod("registerKeyBinding", KeyMapping.class).invoke(null, keyMapping);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("No Fabric key mapping API found", e);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to register key mapping", e);
+        }
+    }
+
     @Override
     public void onInitializeClient() {
         START_RENDER_TICK.register(EventHandler.Client::onRenderTick);
         END_RENDER_TICK.register(EventHandler.Client::onRenderTick);
 
-        KeyBindingHelper.registerKeyBinding(UIManagerFabric.OPEN_CENTER_KEY);
+        registerKeyMapping(UIManagerFabric.OPEN_CENTER_KEY);
 
         FabricReloadListenerCompat.registerSimpleClientReloadListener("client", resourceManager -> {
             ImageStore.getInstance().clear();

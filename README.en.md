@@ -67,9 +67,13 @@ This mod also includes utilities that improve performance and day-to-day UX, suc
 - Issues (this fork): [Tealeste/ModernUI-MC-mVUS](https://github.com/Tealeste/ModernUI-MC-mVUS/issues)
 
 ## Compatibility
-- Minecraft: `1.21.8`, `1.21.9`, `1.21.10`, `1.21.11` (Fabric / Forge / NeoForge)
-- Java: `21`
-- Build target: defaults to `minecraft_version=1.21.11` (override with `-Pminecraft_version=<version>`)
+- Minecraft:
+  - `26.1-snapshot-1` (**Java Edition 26.1 Snapshot 1**) — Fabric
+  - `1.21.8`, `1.21.9`, `1.21.10`, `1.21.11` — Fabric / Forge / NeoForge
+- Java:
+  - `25` for `26.1-snapshot-1` (Gradle must run on Java 25)
+  - `21` for `1.21.8`–`1.21.11`
+- Build target: defaults to `minecraft_version=26.1-snapshot-1` (override with `-Pminecraft_version=<version>`)
 
 ## For Mod Developers
 ### Gradle repositories
@@ -191,9 +195,13 @@ dependencies {
 ModernUI-MC uses a composite build when `../ModernUI` exists (see `settings.gradle`). If you're doing framework
 development, clone `ModernUI` next to this repository and keep both up to date.
 
-- Requirements: JDK `21` (Gradle itself must run on Java 21; newer JDKs like 25 are not supported)
+- Requirements:
+  - Snapshot target (`minecraft_version=26.1-snapshot-1`): JDK `25` (Gradle must run on Java 25)
+  - Legacy targets (`1.21.8`–`1.21.11`): JDK `21`
   - If needed, set `JAVA_HOME` when invoking Gradle
-- One-command distributable jars (Fabric / Forge / NeoForge): `./gradlew buildReleaseJars -Pminecraft_version=<mc_version>` (default: `1.21.11`)
+- One-command distributable jars:
+  - Fabric: `./gradlew buildReleaseJars -Pminecraft_version=<mc_version>` (default: `26.1-snapshot-1`)
+  - Forge / NeoForge: use `-Pminecraft_version=1.21.11` (26.1 snapshot profiles are Fabric-only currently)
 - Output jars (ready for distribution): `build/release/ModernUI-MC-<mod_version>-{fabric,forge,neoforge}.jar`
 - Run a dev client:
   - Fabric: `./gradlew :ModernUI-Fabric:runClient`

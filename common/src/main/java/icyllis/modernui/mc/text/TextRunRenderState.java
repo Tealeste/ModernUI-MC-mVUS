@@ -18,12 +18,12 @@
 
 package icyllis.modernui.mc.text;
 
+import icyllis.modernui.mc.LightCompat;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.gui.render.state.GuiElementRenderState;
-import net.minecraft.client.renderer.LightTexture;
 import org.joml.Matrix3x2f;
 
 import javax.annotation.Nonnull;
@@ -150,19 +150,19 @@ public record TextRunRenderState(
             builder.addVertexWith2DPose(pose, rx + upSkew, ry)
                     .setColor(r, g, b, a)
                     .setUv(glyph.u1, glyph.v1)
-                    .setLight(LightTexture.FULL_BRIGHT);
+                    .setLight(LightCompat.FULL_BRIGHT);
             builder.addVertexWith2DPose(pose, rx + downSkew, ry + h)
                     .setColor(r, g, b, a)
                     .setUv(glyph.u1, glyph.v2)
-                    .setLight(LightTexture.FULL_BRIGHT);
+                    .setLight(LightCompat.FULL_BRIGHT);
             builder.addVertexWith2DPose(pose, rx + w + downSkew, ry + h)
                     .setColor(r, g, b, a)
                     .setUv(glyph.u2, glyph.v2)
-                    .setLight(LightTexture.FULL_BRIGHT);
+                    .setLight(LightCompat.FULL_BRIGHT);
             builder.addVertexWith2DPose(pose, rx + w + upSkew, ry)
                     .setColor(r, g, b, a)
                     .setUv(glyph.u2, glyph.v1)
-                    .setLight(LightTexture.FULL_BRIGHT);
+                    .setLight(LightCompat.FULL_BRIGHT);
         }
     }
 
