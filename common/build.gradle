@@ -33,7 +33,7 @@ sourceSets {
     main {
         java {
             def mcPatch = (minecraft_version as String).tokenize('.').last() as int
-            if (mcPatch < 10) {
+            if (mcPatch < 9) {
                 setSrcDirs(['src/pre_1_21_10/java'])
             } else {
                 def useIdentifierResourceId = mcPatch >= 11
