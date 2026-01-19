@@ -78,6 +78,13 @@ public final class TextureSetupCompat {
     private static LightmapViewResolver resolveLightmapViewResolver(Object gameRenderer) throws ReflectiveOperationException {
         Class<?> rendererClass = gameRenderer.getClass();
 
+        // 1.21.x uses a LightTexture manager; prefer it when present to avoid accidentally
+        // picking other 16x16 textures (e.g., overlay) via heuristic reflection.
+        LightmapViewResolver viaLightTexture = findLightmapViewViaLightTexture(gameRenderer, rendererClass);
+        if (viaLightTexture != null) {
+            return viaLightTexture;
+        }
+
         // 26.1+ may expose a direct lightmap view getter; prefer it when present.
         LightmapViewResolver directViewGetter = findLightmapViewViaDirectGetter(gameRenderer, rendererClass.getMethods());
         if (directViewGetter != null) {
@@ -107,6 +114,78 @@ public final class TextureSetupCompat {
         }
 
         throw new NoSuchMethodException("Unable to resolve lightmap texture view from " + rendererClass.getName());
+    }
+
+    private static LightmapViewResolver findLightmapViewViaLightTexture(Object gameRenderer, Class<?> rendererClass) {
+        Method holderGetter = findNoArgMethod(rendererClass, "lightTexture");
+        if (holderGetter == null) {
+            return null;
+        }
+
+        Class<?> holderType = holderGetter.getReturnType();
+        if (holderType == void.class || holderType.isPrimitive()) {
+            return null;
+        }
+
+        Method viewGetter = findNoArgMethod(holderType, "getTextureView");
+        if (viewGetter == null) {
+            viewGetter = findNoArgGetter(holderType, GpuTextureView.class);
+        }
+        if (viewGetter == null) {
+            return null;
+        }
+
+        holderGetter.setAccessible(true);
+        viewGetter.setAccessible(true);
+
+        final Method holderGetterFinal = holderGetter;
+        final Method viewGetterFinal = viewGetter;
+
+        Object holder;
+        try {
+            holder = holderGetter.invoke(gameRenderer);
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
+        if (holder == null) {
+            return null;
+        }
+
+        GpuTextureView view;
+        try {
+            view = (GpuTextureView) viewGetter.invoke(holder);
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
+        if (!isLightmapSized(view)) {
+            return null;
+        }
+
+        return renderer -> {
+            Object currentHolder = holderGetterFinal.invoke(renderer);
+            if (currentHolder == null) {
+                throw new NullPointerException("LightTexture holder is null");
+            }
+            return (GpuTextureView) viewGetterFinal.invoke(currentHolder);
+        };
+    }
+
+    private static Method findNoArgMethod(Class<?> owner, String methodName) {
+        try {
+            Method method = owner.getMethod(methodName);
+            if (method.getParameterCount() == 0 && !Modifier.isStatic(method.getModifiers()) && method.getReturnType() != void.class) {
+                return method;
+            }
+        } catch (NoSuchMethodException ignored) {
+        }
+        try {
+            Method method = owner.getDeclaredMethod(methodName);
+            if (method.getParameterCount() == 0 && !Modifier.isStatic(method.getModifiers()) && method.getReturnType() != void.class) {
+                return method;
+            }
+        } catch (NoSuchMethodException ignored) {
+        }
+        return null;
     }
 
     private static Method findNoArgGetter(Class<?> owner, Class<?> returnType) {
