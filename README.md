@@ -193,7 +193,11 @@ dependencies {
 - 环境要求：
   - 快照目标（`minecraft_version=26.1-snapshot-1`）：JDK `25`（Gradle 必须运行在 Java 25）
   - 旧版本目标（`1.21.8`–`1.21.11`）：JDK `21`
-  - 如有需要，请在运行 Gradle 时设置 `JAVA_HOME`
+  - 查看 Gradle 使用的 Java：`./gradlew --version`（见 `Launcher JVM`）
+  - 如有需要，请在运行 Gradle 时设置 `JAVA_HOME`（必须指向 JDK 目录，而不是 `/usr/bin/java`）
+  - macOS 示例：
+    - 快照（JDK 25）：`JAVA_HOME=$(/usr/libexec/java_home -v 25) ./gradlew buildReleaseJars`
+    - 旧版本（JDK 21）：`JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew buildReleaseJars -Pminecraft_version=1.21.11`
 - 一条命令构建可分发 jar：
   - Fabric：`./gradlew buildReleaseJars -Pminecraft_version=<mc_version>`（默认：`26.1-snapshot-1`）
   - Forge / NeoForge：使用 `-Pminecraft_version=1.21.11`（26.1 快照目前仅提供 Fabric 配置）

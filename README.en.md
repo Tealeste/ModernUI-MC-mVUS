@@ -198,7 +198,11 @@ development, clone `ModernUI` next to this repository and keep both up to date.
 - Requirements:
   - Snapshot target (`minecraft_version=26.1-snapshot-1`): JDK `25` (Gradle must run on Java 25)
   - Legacy targets (`1.21.8`–`1.21.11`): JDK `21`
-  - If needed, set `JAVA_HOME` when invoking Gradle
+  - Check which Java Gradle is using: `./gradlew --version` (see `Launcher JVM`)
+  - If needed, set `JAVA_HOME` when invoking Gradle (it must be a JDK home directory, not `/usr/bin/java`)
+  - macOS examples:
+    - Snapshot (JDK 25): `JAVA_HOME=$(/usr/libexec/java_home -v 25) ./gradlew buildReleaseJars`
+    - Legacy (JDK 21): `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew buildReleaseJars -Pminecraft_version=1.21.11`
 - One-command distributable jars:
   - Fabric: `./gradlew buildReleaseJars -Pminecraft_version=<mc_version>` (default: `26.1-snapshot-1`)
   - Forge / NeoForge: use `-Pminecraft_version=1.21.11` (26.1 snapshot profiles are Fabric-only currently)
