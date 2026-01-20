@@ -11,6 +11,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Locale;
 
 public final class TextureSetupCompat {
 
@@ -350,6 +351,23 @@ public final class TextureSetupCompat {
         }
         try {
             GpuTexture texture = view.texture();
+            if (texture == null) {
+                return false;
+            }
+
+            // Prefer identifying the lightmap via the underlying texture label, since there can be
+            // multiple 16x16 GPU textures in the renderer (e.g., the entity overlay texture).
+            //
+            // Vanilla labels (observed):
+            // - 1.21.x: "Light Texture"
+            // - 26.1+: "UI Lightmap"
+            String label = texture.getLabel();
+            if (label != null) {
+                String lower = label.toLowerCase(Locale.ROOT);
+                return lower.contains("light texture") || lower.contains("ui lightmap");
+            }
+
+            // Fallback heuristic when labels are unavailable.
             return texture.getWidth(0) == 16 && texture.getHeight(0) == 16;
         } catch (Throwable ignored) {
             return false;
