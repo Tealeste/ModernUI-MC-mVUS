@@ -66,6 +66,7 @@ ModernUI-MC 内置为 Minecraft 量身打造的强大文本布局与渲染系统
 - Minecraft：
   - `26.1-snapshot-1`（**Java Edition 26.1 Snapshot 1**）— Fabric
   - `1.21.8`、`1.21.9`、`1.21.10`、`1.21.11`（Fabric / Forge / NeoForge）
+  - 说明：本项目已支持 Minecraft `26.1` 快照，但依赖模组 `forgeconfigapiport` 目前尚不支持；因此当前可下载构建仅提供 Minecraft `1.21.11～1.21.8`（含端点，即 `1.21.8`–`1.21.11`）。
 - Java：
   - `25` 用于 `26.1-snapshot-1`（Gradle 必须运行在 Java 25）
   - `21` 用于 `1.21.8`–`1.21.11`

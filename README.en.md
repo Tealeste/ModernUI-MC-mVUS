@@ -70,6 +70,7 @@ This mod also includes utilities that improve performance and day-to-day UX, suc
 - Minecraft:
   - `26.1-snapshot-1` (**Java Edition 26.1 Snapshot 1**) — Fabric
   - `1.21.8`, `1.21.9`, `1.21.10`, `1.21.11` — Fabric / Forge / NeoForge
+  - Note: The project already supports Minecraft `26.1` snapshots, but the `forgeconfigapiport` mod dependency does not currently support them. Therefore, downloadable builds are currently only available for Minecraft `1.21.8` through `1.21.11` (inclusive).
 - Java:
   - `25` for `26.1-snapshot-1` (Gradle must run on Java 25)
   - `21` for `1.21.8`–`1.21.11`

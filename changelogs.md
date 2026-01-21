@@ -1,5 +1,12 @@
 Changelogs
 ===
+### Modern UI 3.12.0.5-build.3+mc26.1-snapshot-1 — Version bump (2026-01-21)
+* No functional changes; version bump and documentation updates only.
+* NOTE: The project already supports Minecraft 26.1 snapshots, but `forgeconfigapiport` does not currently support them; therefore, downloadable builds are currently only available for Minecraft 1.21.8–1.21.11 (inclusive).
+
+### Modern UI 3.12.0.5-build.3+mc1.21.11 — Version bump (2026-01-21)
+* No functional changes; version bump and documentation updates only.
+
 ### Modern UI 3.12.0.5-build.2+mc26.1-snapshot-1 — 26.1 Snapshot 1 upgrade (2026-01-15)
 * Add `26.1-snapshot-1` (Java Edition 26.1 Snapshot 1) as a build-selectable target and make it the default build target.
 * Keep `1.21.11` as a selectable build target (`-Pminecraft_version=1.21.11`) and continue building Fabric/Forge/NeoForge for 1.21.11.

@@ -4,7 +4,7 @@ plugins {
 
 ext.modernUiMcProfiles = [
         '1.21.8' : [
-                modVersionBase           : '3.12.0.4',
+                modVersionBase           : '3.12.0.5-build.3',
                 forge                   : '58.1.0',
                 neoforge                : '21.8.46',
                 fabricLoader            : '0.17.2',
@@ -13,7 +13,7 @@ ext.modernUiMcProfiles = [
                 forgeConfigApiPortFabric: '21.8.1',
         ],
         '1.21.9' : [
-                modVersionBase           : '3.12.0.5-build.2',
+                modVersionBase           : '3.12.0.5-build.3',
                 forge                   : '59.0.5',
                 neoforge                : '21.9.16-beta',
                 fabricLoader            : '0.18.1',
@@ -22,7 +22,7 @@ ext.modernUiMcProfiles = [
                 forgeConfigApiPortFabric: '21.9.7',
         ],
         '1.21.10': [
-                modVersionBase           : '3.12.0.5-build.2',
+                modVersionBase           : '3.12.0.5-build.3',
                 forge                   : '60.1.5',
                 neoforge                : '21.10.64',
                 fabricLoader            : '0.18.1',
@@ -31,7 +31,7 @@ ext.modernUiMcProfiles = [
                 forgeConfigApiPortFabric: '21.10.1',
         ],
         '1.21.11': [
-                modVersionBase           : '3.12.0.5-build.2',
+                modVersionBase           : '3.12.0.5-build.3',
                 forge                   : '61.0.3',
                 neoforge                : '21.11.17-beta',
                 fabricLoader            : '0.18.1',
@@ -40,7 +40,7 @@ ext.modernUiMcProfiles = [
                 forgeConfigApiPortFabric: '21.11.1',
         ],
         '26.1-snapshot-1': [
-                modVersionBase           : '3.12.0.5-build.2',
+                modVersionBase           : '3.12.0.5-build.3',
                 // NOTE: Forge/NeoForge support for 26.1 snapshots is not available in this repo yet.
                 fabricLoader            : '0.18.4',
                 fabricApi               : '0.141.3+26.1',
@@ -119,7 +119,7 @@ ext.modernUiFabricApiMin = (ext.modernUiMcProfile.fabricApi as String).tokenize(
 
 def modVersionBase = (ext.modernUiMcProfile.modVersionBase ?: findProperty('mod_version_base') ?: findProperty('mod_version')) as String
 if (!modVersionBase) {
-    throw new GradleException("Missing 'mod_version_base' in gradle.properties (e.g. mod_version_base=3.12.0.5-build.2)")
+    throw new GradleException("Missing 'mod_version_base' in gradle.properties (e.g. mod_version_base=3.12.0.5-build.3)")
 }
 def mcSuffixIndex = modVersionBase.indexOf('+mc')
 if (mcSuffixIndex != -1) {
