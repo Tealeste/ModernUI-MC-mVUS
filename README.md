@@ -65,11 +65,11 @@ ModernUI-MC 内置为 Minecraft 量身打造的强大文本布局与渲染系统
 ## 兼容性
 - Minecraft：
   - `26.1-snapshot-1`（**Java Edition 26.1 Snapshot 1**）— Fabric
-  - `1.21.8`、`1.21.9`、`1.21.10`、`1.21.11`（Fabric / Forge / NeoForge）
-  - 说明：本项目已支持 Minecraft `26.1` 快照，但依赖模组 `forgeconfigapiport` 目前尚不支持；因此当前可下载构建仅提供 Minecraft `1.21.11～1.21.8`（含端点，即 `1.21.8`–`1.21.11`）。
+  - `1.21.9`、`1.21.10`、`1.21.11`（Fabric / Forge / NeoForge）
+  - 说明：本项目已支持 Minecraft `26.1` 快照，但依赖模组 `forgeconfigapiport` 目前尚不支持；因此当前可下载构建仅提供 Minecraft `1.21.11～1.21.9`（含端点，即 `1.21.9`–`1.21.11`）。
 - Java：
   - `25` 用于 `26.1-snapshot-1`（Gradle 必须运行在 Java 25）
-  - `21` 用于 `1.21.8`–`1.21.11`
+  - `21` 用于 `1.21.9`–`1.21.11`
 - 构建目标：默认 `minecraft_version=26.1-snapshot-1`（可用 `-Pminecraft_version=<version>` 覆盖）
 
 ## 面向模组开发者
@@ -193,7 +193,7 @@ dependencies {
 
 - 环境要求：
   - 快照目标（`minecraft_version=26.1-snapshot-1`）：JDK `25`（Gradle 必须运行在 Java 25）
-  - 旧版本目标（`1.21.8`–`1.21.11`）：JDK `21`
+  - 旧版本目标（`1.21.9`–`1.21.11`）：JDK `21`
   - 查看 Gradle 使用的 Java：`./gradlew --version`（见 `Launcher JVM`）
   - 如有需要，请在运行 Gradle 时设置 `JAVA_HOME`（必须指向 JDK 目录，而不是 `/usr/bin/java`）
   - macOS 示例：

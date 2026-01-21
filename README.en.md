@@ -69,11 +69,11 @@ This mod also includes utilities that improve performance and day-to-day UX, suc
 ## Compatibility
 - Minecraft:
   - `26.1-snapshot-1` (**Java Edition 26.1 Snapshot 1**) — Fabric
-  - `1.21.8`, `1.21.9`, `1.21.10`, `1.21.11` — Fabric / Forge / NeoForge
-  - Note: The project already supports Minecraft `26.1` snapshots, but the `forgeconfigapiport` mod dependency does not currently support them. Therefore, downloadable builds are currently only available for Minecraft `1.21.8` through `1.21.11` (inclusive).
+  - `1.21.9`, `1.21.10`, `1.21.11` — Fabric / Forge / NeoForge
+  - Note: The project already supports Minecraft `26.1` snapshots, but the `forgeconfigapiport` mod dependency does not currently support them. Therefore, downloadable builds are currently only available for Minecraft `1.21.9` through `1.21.11` (inclusive).
 - Java:
   - `25` for `26.1-snapshot-1` (Gradle must run on Java 25)
-  - `21` for `1.21.8`–`1.21.11`
+  - `21` for `1.21.9`–`1.21.11`
 - Build target: defaults to `minecraft_version=26.1-snapshot-1` (override with `-Pminecraft_version=<version>`)
 
 ## For Mod Developers
@@ -198,7 +198,7 @@ development, clone `ModernUI` next to this repository and keep both up to date.
 
 - Requirements:
   - Snapshot target (`minecraft_version=26.1-snapshot-1`): JDK `25` (Gradle must run on Java 25)
-  - Legacy targets (`1.21.8`–`1.21.11`): JDK `21`
+  - Legacy targets (`1.21.9`–`1.21.11`): JDK `21`
   - Check which Java Gradle is using: `./gradlew --version` (see `Launcher JVM`)
   - If needed, set `JAVA_HOME` when invoking Gradle (it must be a JDK home directory, not `/usr/bin/java`)
   - macOS examples:
