@@ -495,7 +495,7 @@ public class DashboardFragment extends Fragment {
             future = CompletableFuture.supplyAsync(() -> {
                 HttpURLConnection connection = null;
                 try {
-                    URL url = new URL("https://raw.githubusercontent.com/BloCamLimb/ModernUI-MC/refs/heads/master/changelogs.md");
+                    URL url = new URL("https://raw.githubusercontent.com/Tealeste/ModernUI-MC-mVUS/refs/heads/master/changelogs.md");
                     connection = (HttpURLConnection) url.openConnection();
                     connection.setConnectTimeout(60_000); // 1min
                     connection.setReadTimeout(180_000); // 3min

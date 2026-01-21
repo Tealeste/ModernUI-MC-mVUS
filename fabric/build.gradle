@@ -380,11 +380,11 @@ publishing {
                 name = rootProject.name
                 packaging = 'pom'
                 scm {
-                    url = 'https://github.com/BloCamLimb/ModernUI-MC.git'
+                    url = 'https://github.com/Tealeste/ModernUI-MC-mVUS.git'
                 }
                 issueManagement {
                     system = 'github'
-                    url = 'https://github.com/BloCamLimb/ModernUI/issues'
+                    url = 'https://github.com/Tealeste/ModernUI-MC-mVUS/issues'
                 }
                 licenses {
                     license {

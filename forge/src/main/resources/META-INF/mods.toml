@@ -1,6 +1,6 @@
 modLoader="javafml"
 loaderVersion="${javafml_range}"
-issueTrackerURL="https://github.com/BloCamLimb/ModernUI/issues"
+issueTrackerURL="https://github.com/Tealeste/ModernUI-MC-mVUS/issues"
 logoFile= "modernui_logo.png"
 license="LGPL-3.0-or-later"
 
