@@ -151,7 +151,7 @@ public class DashboardFragment extends Fragment {
                     markflow.setMarkdown(info,
                             I18n.get("gui.modernui.sourceCode_ssss",
                                     "[ModernUI](https://github.com/BloCamLimb/ModernUI)",
-                                    "[ModernUI-MC](https://github.com/BloCamLimb/ModernUI-MC)",
+                                    "[ModernUI-MC](https://github.com/Tealeste/ModernUI-MC-mVUS)",
                                     "", "") + "  \n" +
                                     I18n.get("gui.modernui.modReleases_ssss",
                                             "[CurseForge](https://www.curseforge.com/minecraft/mc-mods/modern-ui)",
@@ -256,7 +256,7 @@ public class DashboardFragment extends Fragment {
         tv.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
         tv.setMovementMethod(LinkMovementMethod.getInstance());
         f.mMarkflow.setMarkdown(tv, result != null ? result :
-                "[Full Changelog…](https://github.com/BloCamLimb/ModernUI-MC/blob/master/changelogs.md)");
+                "[Full Changelog…](https://github.com/Tealeste/ModernUI-MC-mVUS/blob/master/changelogs.md)");
         list.addView(tv);
     }
 
@@ -495,7 +495,7 @@ public class DashboardFragment extends Fragment {
             future = CompletableFuture.supplyAsync(() -> {
                 HttpURLConnection connection = null;
                 try {
-                    URL url = new URL("https://raw.githubusercontent.com/BloCamLimb/ModernUI-MC/refs/heads/master/changelogs.md");
+                    URL url = new URL("https://raw.githubusercontent.com/Tealeste/ModernUI-MC-mVUS/refs/heads/master/changelogs.md");
                     connection = (HttpURLConnection) url.openConnection();
                     connection.setConnectTimeout(60_000); // 1min
                     connection.setReadTimeout(180_000); // 3min
@@ -525,7 +525,7 @@ public class DashboardFragment extends Fragment {
                             sb.append(line).append('\n');
                         }
                     }
-                    sb.append("[Full Changelog…](https://github.com/BloCamLimb/ModernUI-MC/blob/master/changelogs.md)");
+                    sb.append("[Full Changelog…](https://github.com/Tealeste/ModernUI-MC-mVUS/blob/master/changelogs.md)");
                     return sb.toString();
                 } catch (IOException e) {
                     throw new CompletionException(e);
