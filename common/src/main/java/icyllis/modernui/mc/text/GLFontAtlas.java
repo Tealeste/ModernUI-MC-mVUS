@@ -39,7 +39,9 @@ import icyllis.modernui.graphics.Bitmap;
 import icyllis.modernui.mc.MuiModApi;
 import icyllis.modernui.mc.b3d.GlTexture_Wrapped;
 import icyllis.modernui.text.TextUtils;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.lwjgl.opengl.GL45C;
 
 import java.io.IOException;
@@ -83,6 +85,7 @@ public class GLFontAtlas implements AutoCloseable {
 
     // OpenHashMap uses less memory than RBTree/AVLTree, but higher than ArrayMap
     private final Long2ObjectOpenHashMap<GLBakedGlyph> mGlyphs = new Long2ObjectOpenHashMap<>();
+    private final Long2IntOpenHashMap mGlyphChunkIndex = new Long2IntOpenHashMap();
 
     // texture can change by resizing
     @RawPtr
@@ -104,6 +107,7 @@ public class GLFontAtlas implements AutoCloseable {
         final int x;
         final int y;
         final RectanglePacker packer;
+        final LongArrayList glyphKeys = new LongArrayList();
         long lastUse;
 
         private Chunk(int x, int y, RectanglePacker packer) {
@@ -156,6 +160,7 @@ public class GLFontAtlas implements AutoCloseable {
         mLinearSampling = linearSampling;
         assert mMaxTextureSize >= 1024;
         assert mBorderWidth >= 0 && mBorderWidth <= 2;
+        mGlyphChunkIndex.defaultReturnValue(-1);
     }
 
     /**
@@ -182,6 +187,7 @@ public class GLFontAtlas implements AutoCloseable {
 
     public void setNoPixels(long key) {
         mGlyphs.put(key, null);
+        mGlyphChunkIndex.put(key, -1);
     }
 
     private boolean isAtHardCap() {
@@ -189,41 +195,46 @@ public class GLFontAtlas implements AutoCloseable {
     }
 
     @Nullable
-    private Chunk allocate(@NonNull Rect2i rect) {
+    private Chunk allocate(long key, @NonNull Rect2i rect) {
         for (int i = 0, n = mChunks.size(); i < n; i++) {
             var chunk = mChunks.get(i);
             if (chunk.packer.addRect(rect)) {
                 rect.offset(chunk.x, chunk.y);
                 chunk.lastUse = ++mChunkUseCounter;
+                mGlyphChunkIndex.put(key, i);
+                chunk.glyphKeys.add(key);
                 return chunk;
             }
         }
         return null;
     }
 
-    private int invalidateGlyphsInChunk(@NonNull Chunk chunk) {
-        float cu1 = (float) chunk.x / mWidth;
-        float cv1 = (float) chunk.y / mHeight;
-        float cu2 = cu1 + (float) CHUNK_SIZE / mWidth;
-        float cv2 = cv1 + (float) CHUNK_SIZE / mHeight;
+    private int invalidateGlyphsInChunk(int chunkIndex, @NonNull Chunk chunk) {
         int invalidated = 0;
-        for (var glyph : mGlyphs.values()) {
-            if (glyph == null) {
+        for (int i = 0, n = chunk.glyphKeys.size(); i < n; i++) {
+            long key = chunk.glyphKeys.getLong(i);
+            if (mGlyphChunkIndex.get(key) != chunkIndex) {
                 continue;
             }
-            if (glyph.u1 >= cu1 && glyph.u2 < cu2 &&
-                    glyph.v1 >= cv1 && glyph.v2 < cv2) {
-                glyph.x = Integer.MIN_VALUE;
-                invalidated++;
+            var glyph = mGlyphs.get(key);
+            if (glyph == null) {
+                mGlyphChunkIndex.put(key, -1);
+                continue;
             }
+            mGlyphChunkIndex.put(key, -1);
+            glyph.x = Integer.MIN_VALUE;
+            invalidated++;
         }
+        chunk.glyphKeys.clear();
         return invalidated;
     }
 
     private boolean evictOneChunk() {
+        int candidateIndex = -1;
         Chunk candidate = null;
         long bestUse = Long.MAX_VALUE;
-        for (var chunk : mChunks) {
+        for (int i = 0, n = mChunks.size(); i < n; i++) {
+            var chunk = mChunks.get(i);
             if (chunk.packer.getCoverage() == 0) {
                 continue;
             }
@@ -231,6 +242,7 @@ public class GLFontAtlas implements AutoCloseable {
             if (use < bestUse) {
                 bestUse = use;
                 candidate = chunk;
+                candidateIndex = i;
             }
         }
         if (candidate == null) {
@@ -238,11 +250,11 @@ public class GLFontAtlas implements AutoCloseable {
         }
         candidate.packer.clear();
         mEvictedChunks++;
-        mEvictedGlyphs += invalidateGlyphsInChunk(candidate);
+        mEvictedGlyphs += invalidateGlyphsInChunk(candidateIndex, candidate);
         return true;
     }
 
-    public boolean stitch(@NonNull GLBakedGlyph glyph, long pixels) {
+    public boolean stitch(long key, @NonNull GLBakedGlyph glyph, long pixels) {
         if (mWidth == 0) {
             resize(); // first init
         }
@@ -251,7 +263,7 @@ public class GLFontAtlas implements AutoCloseable {
         var rect = mRect;
         rect.set(0, 0,
                 glyph.width + mBorderWidth * 2, glyph.height + mBorderWidth * 2);
-        Chunk allocated = allocate(rect);
+        Chunk allocated = allocate(key, rect);
         if (allocated == null) {
             if (!isAtHardCap()) {
                 mResizeRequested = true;
@@ -273,7 +285,7 @@ public class GLFontAtlas implements AutoCloseable {
                     break;
                 }
                 evicted = true;
-                allocated = allocate(rect);
+                allocated = allocate(key, rect);
             }
             if (!evicted || allocated == null) {
                 mStitchFailures++;
@@ -489,18 +501,8 @@ public class GLFontAtlas implements AutoCloseable {
             }
             coverageToClean -= cc;
             chunk.packer.clear();
-            float cu1 = (float) chunk.x / mWidth;
-            float cv1 = (float) chunk.y / mHeight;
-            float cu2 = cu1 + (float) CHUNK_SIZE / mWidth;
-            float cv2 = cv1 + (float) CHUNK_SIZE / mHeight;
-            for (var glyph : mGlyphs.values()) {
-                if (glyph == null) continue;
-                if (glyph.u1 >= cu1 && glyph.u2 < cu2 &&
-                    glyph.v1 >= cv1 && glyph.v2 < cv2) {
-                    // invalidate glyph image
-                    glyph.x = Integer.MIN_VALUE;
-                }
-            }
+            mEvictedChunks++;
+            mEvictedGlyphs += invalidateGlyphsInChunk(index, chunk);
             cleared = true;
         }
         return cleared;

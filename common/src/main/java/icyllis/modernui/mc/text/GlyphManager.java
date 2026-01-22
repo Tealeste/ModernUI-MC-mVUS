@@ -579,7 +579,7 @@ public class GlyphManager {
         }
         long src = MemoryUtil.memAddress(mImageBuffer.flip());
 
-        boolean success = atlas.stitch(glyph, src);
+        boolean success = atlas.stitch(key, glyph, src);
         if (!success) {
             // invalidate glyph image and defer to next frame
             glyph.x = Integer.MIN_VALUE;
@@ -619,7 +619,7 @@ public class GlyphManager {
                 glyph.y = -EMOJI_ASCENT;
                 glyph.width = EMOJI_SIZE;
                 glyph.height = EMOJI_SIZE;
-                boolean success = atlas.stitch(glyph, src);
+                boolean success = atlas.stitch(key, glyph, src);
                 if (!success) {
                     // invalidate glyph image and defer to next frame
                     glyph.x = Integer.MIN_VALUE;
@@ -656,7 +656,7 @@ public class GlyphManager {
         // here width and height are in pixels
         glyph.width = (short) font.getSpriteWidth();
         glyph.height = (short) font.getSpriteHeight();
-        boolean success = atlas.stitch(glyph, src);
+        boolean success = atlas.stitch(key, glyph, src);
         // here width and height are scaled
         font.setGlyphMetrics(glyph);
         if (!success) {
