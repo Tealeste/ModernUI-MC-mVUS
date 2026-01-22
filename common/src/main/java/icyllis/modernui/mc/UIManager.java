@@ -1395,7 +1395,9 @@ public abstract class UIManager implements LifecycleOwner {
         //BlurHandler.INSTANCE.closeEffect();
         FontResourceManager.getInstance().close();
         ImageStore.getInstance().clear();
-        System.gc();
+        if (ModernUIMod.isDeveloperMode()) {
+            System.gc();
+        }
         Core.requireImmediateContext().unref();
         if (sInstance != null) {
             AudioManager.getInstance().close();
