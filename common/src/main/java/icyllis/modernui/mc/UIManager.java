@@ -204,8 +204,12 @@ public abstract class UIManager implements LifecycleOwner {
     /// Lifecycle \\\
 
     protected LifecycleRegistry mFragmentLifecycleRegistry;
+    private final ThreadLocal<MuiScreen> mBackPressSource = new ThreadLocal<>();
     private final OnBackPressedDispatcher mOnBackPressedDispatcher =
-            new OnBackPressedDispatcher(() -> minecraft.schedule(this::onBackPressed));
+            new OnBackPressedDispatcher(() -> {
+                MuiScreen expected = mBackPressSource.get();
+                minecraft.schedule(() -> onBackPressed(expected));
+            });
 
     private ViewModelStore mViewModelStore;
     protected volatile FragmentController mFragmentController;
@@ -294,10 +298,14 @@ public abstract class UIManager implements LifecycleOwner {
     protected abstract void open(@Nonnull Fragment fragment);
 
     @MainThread
-    void onBackPressed() {
+    void onBackPressed(@Nullable MuiScreen expectedScreen) {
         final MuiScreen screen = mScreen;
-        if (screen == null)
+        if (screen == null) {
             return;
+        }
+        if (expectedScreen != null && screen != expectedScreen) {
+            return;
+        }
         if (screen.getCallback() != null && !screen.getCallback().shouldClose()) {
             return;
         }
@@ -353,6 +361,16 @@ public abstract class UIManager implements LifecycleOwner {
 
     public OnBackPressedDispatcher getOnBackPressedDispatcher() {
         return mOnBackPressedDispatcher;
+    }
+
+    @UiThread
+    public void dispatchBackPressed(@Nonnull MuiScreen sourceScreen) {
+        mBackPressSource.set(sourceScreen);
+        try {
+            mOnBackPressedDispatcher.onBackPressed();
+        } finally {
+            mBackPressSource.remove();
+        }
     }
 
     @Nonnull

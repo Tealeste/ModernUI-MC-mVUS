@@ -133,7 +133,7 @@ final class SimpleScreen extends Screen implements MuiScreen {
 
     @Override
     public void onBackPressed() {
-        mHost.getOnBackPressedDispatcher().onBackPressed();
+        mHost.dispatchBackPressed(this);
     }
 
     // IMPL - GuiEventListener
