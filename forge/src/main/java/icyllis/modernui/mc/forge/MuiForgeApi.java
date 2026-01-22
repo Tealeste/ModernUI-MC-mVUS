@@ -50,8 +50,12 @@ import net.minecraftforge.common.capabilities.ICapabilityProvider;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 /**
  * Public APIs for Minecraft Forge mods to Modern UI.
@@ -60,6 +64,22 @@ import java.util.function.Supplier;
  */
 @OnlyIn(Dist.CLIENT)
 public final class MuiForgeApi extends MuiModApi {
+
+    @Nullable
+    private static final MethodHandle RARITY_GET_STYLE_MODIFIER = findRarityGetStyleModifier();
+
+    @Nullable
+    private static MethodHandle findRarityGetStyleModifier() {
+        try {
+            return MethodHandles.publicLookup().findVirtual(
+                    Rarity.class,
+                    "getStyleModifier",
+                    MethodType.methodType(UnaryOperator.class)
+            );
+        } catch (NoSuchMethodException | IllegalAccessException ignored) {
+            return null;
+        }
+    }
 
     public MuiForgeApi() {
         ModernUIMod.LOGGER.info(ModernUIMod.MARKER, "Created MuiForgeAPI");
@@ -189,8 +209,17 @@ public final class MuiForgeApi extends MuiModApi {
 
     @Override
     public Style applyRarityTo(Rarity rarity, Style baseStyle) {
-        //FIXME Forge removed IExtensibleEnum for Rarity, not sure when it will be back...
-        //return rarity.getStyleModifier().apply(baseStyle);
+        MethodHandle getStyleModifier = RARITY_GET_STYLE_MODIFIER;
+        if (getStyleModifier != null) {
+            try {
+                @SuppressWarnings("unchecked")
+                UnaryOperator<Style> modifier = (UnaryOperator<Style>) getStyleModifier.invoke(rarity);
+                if (modifier != null) {
+                    return modifier.apply(baseStyle);
+                }
+            } catch (Throwable ignored) {
+            }
+        }
         return baseStyle.withColor(rarity.color());
     }
 
