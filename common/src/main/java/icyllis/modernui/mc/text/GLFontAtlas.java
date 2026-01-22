@@ -100,7 +100,17 @@ public class GLFontAtlas implements AutoCloseable {
 
     private final Rect2i mRect = new Rect2i();
 
-    private record Chunk(int x, int y, RectanglePacker packer) {
+    private static final class Chunk {
+        final int x;
+        final int y;
+        final RectanglePacker packer;
+        long lastUse;
+
+        private Chunk(int x, int y, RectanglePacker packer) {
+            this.x = x;
+            this.y = y;
+            this.packer = packer;
+        }
     }
 
     private final ImmediateContext mContext;
@@ -120,6 +130,15 @@ public class GLFontAtlas implements AutoCloseable {
 
     // overflow and wrap
     private int mLastCompactChunkIndex;
+    private long mChunkUseCounter;
+
+    private boolean mWarnedHardCapEviction;
+
+    private long mGlyphCacheHits;
+    private long mGlyphCacheMisses;
+    private long mEvictedChunks;
+    private long mEvictedGlyphs;
+    private long mStitchFailures;
 
     @RenderThread
     public GLFontAtlas(ImmediateContext context, int maskFormat, int borderWidth,
@@ -149,12 +168,78 @@ public class GLFontAtlas implements AutoCloseable {
      */
     @Nullable
     public GLBakedGlyph getGlyph(long key) {
+        var existing = mGlyphs.get(key);
+        if (existing != null || mGlyphs.containsKey(key)) {
+            mGlyphCacheHits++;
+            return existing;
+        }
+        mGlyphCacheMisses++;
         // static factory
-        return mGlyphs.computeIfAbsent(key, __ -> new GLBakedGlyph());
+        var created = new GLBakedGlyph();
+        mGlyphs.put(key, created);
+        return created;
     }
 
     public void setNoPixels(long key) {
         mGlyphs.put(key, null);
+    }
+
+    private boolean isAtHardCap() {
+        return mWidth == mMaxTextureSize && mHeight == mMaxTextureSize;
+    }
+
+    @Nullable
+    private Chunk allocate(@NonNull Rect2i rect) {
+        for (int i = 0, n = mChunks.size(); i < n; i++) {
+            var chunk = mChunks.get(i);
+            if (chunk.packer.addRect(rect)) {
+                rect.offset(chunk.x, chunk.y);
+                chunk.lastUse = ++mChunkUseCounter;
+                return chunk;
+            }
+        }
+        return null;
+    }
+
+    private int invalidateGlyphsInChunk(@NonNull Chunk chunk) {
+        float cu1 = (float) chunk.x / mWidth;
+        float cv1 = (float) chunk.y / mHeight;
+        float cu2 = cu1 + (float) CHUNK_SIZE / mWidth;
+        float cv2 = cv1 + (float) CHUNK_SIZE / mHeight;
+        int invalidated = 0;
+        for (var glyph : mGlyphs.values()) {
+            if (glyph == null) {
+                continue;
+            }
+            if (glyph.u1 >= cu1 && glyph.u2 < cu2 &&
+                    glyph.v1 >= cv1 && glyph.v2 < cv2) {
+                glyph.x = Integer.MIN_VALUE;
+                invalidated++;
+            }
+        }
+        return invalidated;
+    }
+
+    private boolean evictOneChunk() {
+        Chunk candidate = null;
+        long bestUse = Long.MAX_VALUE;
+        for (var chunk : mChunks) {
+            if (chunk.packer.getCoverage() == 0) {
+                continue;
+            }
+            long use = chunk.lastUse;
+            if (use < bestUse) {
+                bestUse = use;
+                candidate = chunk;
+            }
+        }
+        if (candidate == null) {
+            return false;
+        }
+        candidate.packer.clear();
+        mEvictedChunks++;
+        mEvictedGlyphs += invalidateGlyphsInChunk(candidate);
+        return true;
     }
 
     public boolean stitch(@NonNull GLBakedGlyph glyph, long pixels) {
@@ -166,17 +251,34 @@ public class GLFontAtlas implements AutoCloseable {
         var rect = mRect;
         rect.set(0, 0,
                 glyph.width + mBorderWidth * 2, glyph.height + mBorderWidth * 2);
-        boolean inserted = false;
-        for (Chunk chunk : mChunks) {
-            if (chunk.packer.addRect(rect)) {
-                inserted = true;
-                rect.offset(chunk.x, chunk.y);
-                break;
+        Chunk allocated = allocate(rect);
+        if (allocated == null) {
+            if (!isAtHardCap()) {
+                mResizeRequested = true;
+                return false;
             }
-        }
-        if (!inserted) {
-            mResizeRequested = true;
-            return false;
+
+            if (!mWarnedHardCapEviction) {
+                mWarnedHardCapEviction = true;
+                LOGGER.warn(GlyphManager.MARKER,
+                        "Font atlas reached hard cap (mask format: {}, max size: {}). " +
+                                "Evicting chunks to make room; glyphs may re-rasterize under extreme pressure.",
+                        mMaskFormat, mMaxTextureSize);
+            }
+
+            boolean evicted = false;
+            // Keep this bounded: eviction can be expensive when glyph pressure is extreme.
+            for (int i = 0; i < 4 && allocated == null; i++) {
+                if (!evictOneChunk()) {
+                    break;
+                }
+                evicted = true;
+                allocated = allocate(rect);
+            }
+            if (!evicted || allocated == null) {
+                mStitchFailures++;
+                return false;
+            }
         }
 
         // include border
@@ -226,8 +328,10 @@ public class GLFontAtlas implements AutoCloseable {
             final int oldHeight = mHeight;
 
             if (oldWidth == mMaxTextureSize && oldHeight == mMaxTextureSize) {
-                LOGGER.warn(GlyphManager.MARKER, "Font atlas reached max texture size, " +
-                        "mask format: {}, max size: {}, current texture: {}", mMaskFormat, mMaxTextureSize, mTexture);
+                if (!mWarnedHardCapEviction) {
+                    LOGGER.warn(GlyphManager.MARKER, "Font atlas reached max texture size, " +
+                            "mask format: {}, max size: {}, current texture: {}", mMaskFormat, mMaxTextureSize, mTexture);
+                }
                 return false;
             }
 
@@ -392,7 +496,7 @@ public class GLFontAtlas implements AutoCloseable {
             for (var glyph : mGlyphs.values()) {
                 if (glyph == null) continue;
                 if (glyph.u1 >= cu1 && glyph.u2 < cu2 &&
-                        glyph.v1 >= cv1 && glyph.v2 < cv2) {
+                    glyph.v1 >= cv1 && glyph.v2 < cv2) {
                     // invalidate glyph image
                     glyph.x = Integer.MIN_VALUE;
                 }
@@ -496,6 +600,11 @@ public class GLFontAtlas implements AutoCloseable {
         pw.print(name);
         pw.printf(": NumGlyphs=%d (in-use: %d, empty: %d, evicted: %d)",
                 getGlyphCount(), validGlyphs, emptyGlyphs, evictedGlyphs);
+        pw.printf(", Cache=%d/%d (hit/miss)", mGlyphCacheHits, mGlyphCacheMisses);
+        pw.printf(", Evicted=%d chunks, %d glyphs", mEvictedChunks, mEvictedGlyphs);
+        if (mStitchFailures != 0) {
+            pw.printf(", StitchFailures=%d", mStitchFailures);
+        }
         pw.print(", Coverage=");
         pw.printf("%.4f", getCoverage());
         pw.print(", GPUMemorySize=");
