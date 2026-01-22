@@ -29,3 +29,15 @@ license="LGPL-3.0-or-later"
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+[[dependencies.modernui]]
+    modId="tipthescales"
+    mandatory=false
+    versionRange=""
+    ordering="NONE"
+    side="CLIENT"
+[[dependencies.modernui]]
+    modId="reblured"
+    mandatory=false
+    versionRange=""
+    ordering="NONE"
+    side="CLIENT"

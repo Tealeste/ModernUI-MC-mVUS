@@ -64,12 +64,12 @@ public final class ModernUIForge extends ModernUIMod {
         // TipTheScales doesn't work with OptiFine
         if (ModList.get().isLoaded("tipthescales") && !ModernUIMod.sOptiFineLoaded) {
             //sInterceptTipTheScales = true;
-            LOGGER.fatal(MARKER, "Detected TipTheScales without OptiFine");
+            LOGGER.warn(MARKER, "Detected TipTheScales without OptiFine");
             warnSetup("You should remove TipTheScales, Modern UI already includes its features, " +
                     "and Modern UI is also compatible with OptiFine");
         }
         if (ModList.get().isLoaded("reblured")) {
-            LOGGER.fatal(MARKER, "Detected ReBlurred");
+            LOGGER.warn(MARKER, "Detected ReBlurred");
             warnSetup("You should remove ReBlurred, Modern UI already includes its features, " +
                     "and Modern UI has better performance than it");
         }

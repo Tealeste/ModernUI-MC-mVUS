@@ -37,3 +37,6 @@ license="LGPL-3.0-or-later"
 [[dependencies.modernui]]
     modId="tipthescales"
     type="discouraged"
+[[dependencies.modernui]]
+    modId="reblured"
+    type="discouraged"
