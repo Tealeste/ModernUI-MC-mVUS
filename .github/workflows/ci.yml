@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "Java 25 • 26.1-snapshot-1 • Fabric"
+            java: "25"
+            minecraft_version: "26.1-snapshot-1"
+            gradle_tasks: ":ModernUI-Fabric:build -x test"
+          - name: "Java 21 • 1.21.11 • Fabric/Forge/NeoForge"
+            java: "21"
+            minecraft_version: "1.21.11"
+            gradle_tasks: "build -x test"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      - name: Set up Gradle (with caching)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace ${{ matrix.gradle_tasks }} -Pminecraft_version=${{ matrix.minecraft_version }}
+
