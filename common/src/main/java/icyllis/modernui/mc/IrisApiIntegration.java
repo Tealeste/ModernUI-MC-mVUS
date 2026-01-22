@@ -21,20 +21,25 @@ package icyllis.modernui.mc;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @ApiStatus.Internal
 public final class IrisApiIntegration {
 
     private static Object irisApiInstance;
     private static Method isShaderPackInUse;
+    private static final AtomicBoolean WARNED_INVOKE_FAILURE = new AtomicBoolean();
 
     static {
         try {
             Class<?> clazz = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
             irisApiInstance = clazz.getMethod("getInstance").invoke(null);
             isShaderPackInUse = clazz.getMethod("isShaderPackInUse");
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (ClassNotFoundException ignored) {
+            // Iris not installed.
+        } catch (Throwable t) {
+            ModernUIMod.LOGGER.warn(ModernUIMod.MARKER,
+                    "Failed to initialize Iris API integration; assuming no shader pack is active.", t);
         }
     }
 
@@ -45,8 +50,11 @@ public final class IrisApiIntegration {
         if (isShaderPackInUse != null) {
             try {
                 return (boolean) isShaderPackInUse.invoke(irisApiInstance);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Throwable t) {
+                if (WARNED_INVOKE_FAILURE.compareAndSet(false, true)) {
+                    ModernUIMod.LOGGER.warn(ModernUIMod.MARKER,
+                            "Failed to query Iris shader pack state; assuming no shader pack is active.", t);
+                }
             }
         }
         return false;

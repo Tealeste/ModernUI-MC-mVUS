@@ -104,7 +104,7 @@ public class EmojiDataGen {
                     new FileOutputStream(output), StandardCharsets.UTF_8))) {
                 gson.toJson(output_data, writer);
             } catch (IOException e) {
-                e.printStackTrace();
+                ModernUIMod.LOGGER.error(ModernUIMod.MARKER, "EmojiDataGen failed to write {}", output, e);
             }
         }
     }

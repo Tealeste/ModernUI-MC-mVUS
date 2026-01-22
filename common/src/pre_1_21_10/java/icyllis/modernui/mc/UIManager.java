@@ -1170,7 +1170,8 @@ public abstract class UIManager implements LifecycleOwner {
                 // in case of GLFW is terminated too early
                 sInstance.mUiThread.join(1000);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
+                LOGGER.warn(MARKER, "Interrupted while waiting for UI thread to stop", e);
             }
         }
         LOGGER.debug(MARKER, "Quited Modern UI");

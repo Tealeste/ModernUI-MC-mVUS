@@ -85,7 +85,6 @@ public class FourColorPicker extends RelativeLayout {
             try {
                 color = Color.parseColor(string);
             } catch (IllegalArgumentException e) {
-                e.printStackTrace();
             }
             if (mColors[index] != color) {
                 mColors[index] = color;

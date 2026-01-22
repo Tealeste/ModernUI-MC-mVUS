@@ -24,24 +24,41 @@ import org.jetbrains.annotations.ApiStatus;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @ApiStatus.Internal
 public final class OptiFineIntegration {
 
     private static Field of_fast_render;
     private static Field shaderPackLoaded;
+    private static final AtomicBoolean WARNED_OPEN_SHADERS_GUI = new AtomicBoolean();
+    private static final AtomicBoolean WARNED_SET_FAST_RENDER = new AtomicBoolean();
+    private static final AtomicBoolean WARNED_SET_GUI_SCALE = new AtomicBoolean();
+    private static final AtomicBoolean WARNED_SHADERPACK_LOADED = new AtomicBoolean();
+    private static final AtomicBoolean WARNED_INIT_REFLECTION = new AtomicBoolean();
 
     static {
         try {
             of_fast_render = Options.class.getDeclaredField("ofFastRender");
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (NoSuchFieldException ignored) {
+            // OptiFine not installed (or option removed); integration becomes a no-op.
+        } catch (Throwable t) {
+            if (WARNED_INIT_REFLECTION.compareAndSet(false, true)) {
+                ModernUIMod.LOGGER.warn(ModernUIMod.MARKER,
+                        "Failed to initialize OptiFine integration (ofFastRender); feature will be unavailable.", t);
+            }
         }
         try {
             Class<?> clazz = Class.forName("net.optifine.shaders.Shaders");
             shaderPackLoaded = clazz.getDeclaredField("shaderPackLoaded");
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (ClassNotFoundException | NoSuchFieldException ignored) {
+            // OptiFine shaders not installed; integration becomes a no-op.
+        } catch (Throwable t) {
+            if (WARNED_INIT_REFLECTION.compareAndSet(false, true)) {
+                ModernUIMod.LOGGER.warn(ModernUIMod.MARKER,
+                        "Failed to initialize OptiFine integration (Shaders.shaderPackLoaded); assuming no shader pack.",
+                        t);
+            }
         }
     }
 
@@ -54,8 +71,11 @@ public final class OptiFineIntegration {
             Class<?> clazz = Class.forName("net.optifine.shaders.gui.GuiShaders");
             Constructor<?> constructor = clazz.getConstructor(Screen.class, Options.class);
             minecraft.setScreen((Screen) constructor.newInstance(minecraft.screen, minecraft.options));
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable t) {
+            if (WARNED_OPEN_SHADERS_GUI.compareAndSet(false, true)) {
+                ModernUIMod.LOGGER.warn(ModernUIMod.MARKER,
+                        "Failed to open OptiFine shaders screen.", t);
+            }
         }
     }
 
@@ -71,8 +91,11 @@ public final class OptiFineIntegration {
             try {
                 of_fast_render.setBoolean(minecraft.options, fastRender);
                 minecraft.options.save();
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Throwable t) {
+                if (WARNED_SET_FAST_RENDER.compareAndSet(false, true)) {
+                    ModernUIMod.LOGGER.warn(ModernUIMod.MARKER,
+                            "Failed to update OptiFine fast render option.", t);
+                }
             }
         }
     }
@@ -83,8 +106,11 @@ public final class OptiFineIntegration {
             Field field = Options.class.getDeclaredField("GUI_SCALE");
             field.setAccessible(true);
             field.set(minecraft.options, option);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable t) {
+            if (WARNED_SET_GUI_SCALE.compareAndSet(false, true)) {
+                ModernUIMod.LOGGER.warn(ModernUIMod.MARKER,
+                        "Failed to apply OptiFine GUI scale option replacement.", t);
+            }
         }
     }
 
@@ -92,8 +118,11 @@ public final class OptiFineIntegration {
         if (shaderPackLoaded != null) {
             try {
                 return shaderPackLoaded.getBoolean(null);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Throwable t) {
+                if (WARNED_SHADERPACK_LOADED.compareAndSet(false, true)) {
+                    ModernUIMod.LOGGER.warn(ModernUIMod.MARKER,
+                            "Failed to query OptiFine shader pack state; assuming no shader pack is active.", t);
+                }
             }
         }
         return false;
