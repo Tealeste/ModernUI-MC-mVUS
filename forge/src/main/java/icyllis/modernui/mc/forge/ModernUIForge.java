@@ -20,6 +20,7 @@ package icyllis.modernui.mc.forge;
 
 import icyllis.modernui.ModernUI;
 import icyllis.modernui.mc.*;
+import icyllis.modernui.mc.compat.ModListCompat;
 import icyllis.modernui.mc.ui.CenterFragment2;
 import icyllis.modernui.util.DataSet;
 import net.minecraft.client.Minecraft;
@@ -68,19 +69,19 @@ public final class ModernUIForge extends ModernUIMod {
         }
 
         // TipTheScales doesn't work with OptiFine
-        if (ModList.get().isLoaded("tipthescales") && !ModernUIMod.sOptiFineLoaded) {
+        if (ModListCompat.isLoaded("tipthescales") && !ModernUIMod.sOptiFineLoaded) {
             //sInterceptTipTheScales = true;
             LOGGER.warn(MARKER, "Detected TipTheScales without OptiFine");
             warnSetup("You should remove TipTheScales, Modern UI already includes its features, " +
                     "and Modern UI is also compatible with OptiFine");
         }
-        if (ModList.get().isLoaded("reblured")) {
+        if (ModListCompat.isLoaded("reblured")) {
             LOGGER.warn(MARKER, "Detected ReBlurred");
             warnSetup("You should remove ReBlurred, Modern UI already includes its features, " +
                     "and Modern UI has better performance than it");
         }
-        sLegendaryTooltipsLoaded = ModList.get().isLoaded("legendarytooltips");
-        sUntranslatedItemsLoaded = ModList.get().isLoaded("untranslateditems");
+        sLegendaryTooltipsLoaded = ModListCompat.isLoaded("legendarytooltips");
+        sUntranslatedItemsLoaded = ModListCompat.isLoaded("untranslateditems");
 
         context.registerConfig(ModConfig.Type.COMMON, ConfigImpl.COMMON_SPEC,
                 ModernUI.NAME_CPT + "/common.toml");
