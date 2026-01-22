@@ -77,6 +77,8 @@ import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.joml.Matrix3x2f;
+import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GL32C;
 import org.lwjgl.opengl.GL33C;
 import org.lwjgl.system.MemoryUtil;
 
@@ -84,6 +86,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.ByteBuffer;
 import java.util.*;
 
 import static icyllis.modernui.mc.ModernUIMod.LOGGER;
@@ -159,6 +162,32 @@ public abstract class UIManager implements LifecycleOwner {
     private GlTextureView mLayerTextureView;
 
     public final TooltipRenderer mTooltipRenderer = new TooltipRenderer();
+
+    @Nullable
+    private PendingScreenshot mPendingScreenshot;
+
+    private static final class PendingScreenshot {
+        @SharedPtr
+        final ImageViewProxy surface;
+        final Bitmap bitmap;
+        final int pbo;
+        final long fence;
+        final int width;
+        final int height;
+        final long sizeBytes;
+        int polls;
+
+        private PendingScreenshot(ImageViewProxy surface, Bitmap bitmap, int pbo, long fence,
+                                  int width, int height, long sizeBytes) {
+            this.surface = surface;
+            this.bitmap = bitmap;
+            this.pbo = pbo;
+            this.fence = fence;
+            this.width = width;
+            this.height = height;
+            this.sizeBytes = sizeBytes;
+        }
+    }
 
 
     /// User Interface \\\
@@ -687,6 +716,13 @@ public abstract class UIManager implements LifecycleOwner {
     @VisibleForTesting
     @SuppressWarnings("resource")
     public void takeScreenshot() {
+        if (!RenderSystem.isOnRenderThread()) {
+            minecraft.submit(this::takeScreenshot);
+            return;
+        }
+        if (mPendingScreenshot != null) {
+            return;
+        }
         @SharedPtr
         ImageViewProxy surface = mRoot.getLayer();
         if (surface == null) {
@@ -696,18 +732,22 @@ public abstract class UIManager implements LifecycleOwner {
         GLTexture layer = (GLTexture) surface.getImage();
         final int width = layer.getWidth();
         final int height = layer.getHeight();
-        final Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Format.RGBA_8888);
-        bitmap.setPremultiplied(true);
         GL33C.glPixelStorei(GL33C.GL_PACK_ROW_LENGTH, 0);
         GL33C.glPixelStorei(GL33C.GL_PACK_SKIP_ROWS, 0);
         GL33C.glPixelStorei(GL33C.GL_PACK_SKIP_PIXELS, 0);
         GL33C.glPixelStorei(GL33C.GL_PACK_ALIGNMENT, 1);
-        // SYNC GPU TODO (use transfer buffer?)
+
+        if (isAsyncReadbackSupported()) {
+            startAsyncReadback(surface, layer, width, height);
+            return;
+        }
+
+        final Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Format.RGBA_8888);
+        bitmap.setPremultiplied(true);
         GL33C.glBindBuffer(GL33C.GL_PIXEL_PACK_BUFFER, 0);
         int boundTexture = GL33C.glGetInteger(GL33C.GL_TEXTURE_BINDING_2D);
         GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, layer.getHandle());
-        GL33C.glGetTexImage(GL33C.GL_TEXTURE_2D, 0, GL33C.GL_RGBA, GL33C.GL_UNSIGNED_BYTE,
-                bitmap.getAddress());
+        GL33C.glGetTexImage(GL33C.GL_TEXTURE_2D, 0, GL33C.GL_RGBA, GL33C.GL_UNSIGNED_BYTE, bitmap.getAddress());
         GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, boundTexture);
         surface.unref();
         UtilCompat.ioPool().execute(() -> {
@@ -716,6 +756,148 @@ public abstract class UIManager implements LifecycleOwner {
             try (bitmap) {
                 // unpremul and flip
                 PixelUtils.convertPixels(bitmap.getPixmap(), converted.getPixmap(), true);
+            }
+            try (converted) {
+                converted.saveDialog(Bitmap.SaveFormat.PNG, 0, null);
+            } catch (IOException e) {
+                LOGGER.warn(MARKER, "Failed to save UI screenshot", e);
+            }
+        });
+    }
+
+    private static boolean isAsyncReadbackSupported() {
+        var caps = GL.getCapabilities();
+        return (caps.OpenGL21 || caps.GL_ARB_pixel_buffer_object) &&
+                (caps.OpenGL32 || caps.GL_ARB_sync);
+    }
+
+    @RenderThread
+    @SuppressWarnings("resource")
+    private void startAsyncReadback(@SharedPtr ImageViewProxy surface, @RawPtr GLTexture layer, int width, int height) {
+        final long sizeBytes = (long) width * (long) height * 4L;
+        if (sizeBytes <= 0 || sizeBytes > Integer.MAX_VALUE) {
+            surface.unref();
+            return;
+        }
+
+        final Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Format.RGBA_8888);
+        bitmap.setPremultiplied(true);
+
+        int pbo = 0;
+        long fence = MemoryUtil.NULL;
+        try {
+            pbo = GL33C.glGenBuffers();
+            GL33C.glBindBuffer(GL33C.GL_PIXEL_PACK_BUFFER, pbo);
+            GL33C.glBufferData(GL33C.GL_PIXEL_PACK_BUFFER, sizeBytes, GL33C.GL_STREAM_READ);
+
+            int boundTexture = GL33C.glGetInteger(GL33C.GL_TEXTURE_BINDING_2D);
+            GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, layer.getHandle());
+            GL33C.glGetTexImage(GL33C.GL_TEXTURE_2D, 0, GL33C.GL_RGBA, GL33C.GL_UNSIGNED_BYTE, 0L);
+            GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, boundTexture);
+
+            fence = GL32C.glFenceSync(GL32C.GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+            GL33C.glBindBuffer(GL33C.GL_PIXEL_PACK_BUFFER, 0);
+            GL33C.glFlush();
+
+            mPendingScreenshot = new PendingScreenshot(surface, bitmap, pbo, fence, width, height, sizeBytes);
+        } catch (Throwable t) {
+            GL33C.glBindBuffer(GL33C.GL_PIXEL_PACK_BUFFER, 0);
+            if (fence != MemoryUtil.NULL) {
+                GL32C.glDeleteSync(fence);
+            }
+            if (pbo != 0) {
+                GL33C.glDeleteBuffers(pbo);
+            }
+            LOGGER.warn(MARKER, "Failed to start async UI screenshot readback; using sync readback instead.", t);
+            try {
+                GL33C.glBindBuffer(GL33C.GL_PIXEL_PACK_BUFFER, 0);
+                int boundTexture = GL33C.glGetInteger(GL33C.GL_TEXTURE_BINDING_2D);
+                GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, layer.getHandle());
+                GL33C.glGetTexImage(GL33C.GL_TEXTURE_2D, 0, GL33C.GL_RGBA, GL33C.GL_UNSIGNED_BYTE,
+                        bitmap.getAddress());
+                GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, boundTexture);
+                surface.unref();
+                UtilCompat.ioPool().execute(() -> {
+                    Bitmap converted = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Format.RGBA_8888);
+                    converted.setPremultiplied(false);
+                    try (bitmap) {
+                        PixelUtils.convertPixels(bitmap.getPixmap(), converted.getPixmap(), true);
+                    }
+                    try (converted) {
+                        converted.saveDialog(Bitmap.SaveFormat.PNG, 0, null);
+                    } catch (IOException e) {
+                        LOGGER.warn(MARKER, "Failed to save UI screenshot", e);
+                    }
+                });
+            } catch (Throwable t2) {
+                surface.unref();
+                try (bitmap) {
+                    LOGGER.warn(MARKER, "Failed to take UI screenshot", t2);
+                }
+            }
+        }
+    }
+
+    @RenderThread
+    private void pollPendingScreenshot() {
+        PendingScreenshot pending = mPendingScreenshot;
+        if (pending == null) {
+            return;
+        }
+        pending.polls++;
+        int wait = GL32C.glClientWaitSync(pending.fence, 0, 0);
+        if (wait == GL32C.GL_TIMEOUT_EXPIRED) {
+            if (pending.polls > 300) {
+                mPendingScreenshot = null;
+                GL32C.glDeleteSync(pending.fence);
+                GL33C.glDeleteBuffers(pending.pbo);
+                pending.surface.unref();
+                try (pending.bitmap) {
+                    LOGGER.warn(MARKER, "Timed out waiting for async UI screenshot readback; discarded.");
+                }
+            }
+            return;
+        }
+        if (wait == GL32C.GL_WAIT_FAILED) {
+            mPendingScreenshot = null;
+            GL32C.glDeleteSync(pending.fence);
+            GL33C.glDeleteBuffers(pending.pbo);
+            pending.surface.unref();
+            try (pending.bitmap) {
+                LOGGER.warn(MARKER, "Async UI screenshot readback failed; discarded.");
+            }
+            return;
+        }
+
+        mPendingScreenshot = null;
+        GL32C.glDeleteSync(pending.fence);
+
+        ByteBuffer tmp = null;
+        try {
+            GL33C.glBindBuffer(GL33C.GL_PIXEL_PACK_BUFFER, pending.pbo);
+            tmp = MemoryUtil.memAlloc((int) pending.sizeBytes);
+            GL33C.glGetBufferSubData(GL33C.GL_PIXEL_PACK_BUFFER, 0, tmp);
+            MemoryUtil.memCopy(MemoryUtil.memAddress(tmp), pending.bitmap.getAddress(), pending.sizeBytes);
+        } catch (Throwable t) {
+            pending.surface.unref();
+            try (pending.bitmap) {
+                LOGGER.warn(MARKER, "Failed to read back UI screenshot; discarded.", t);
+            }
+            return;
+        } finally {
+            if (tmp != null) {
+                MemoryUtil.memFree(tmp);
+            }
+            GL33C.glBindBuffer(GL33C.GL_PIXEL_PACK_BUFFER, 0);
+            GL33C.glDeleteBuffers(pending.pbo);
+        }
+
+        pending.surface.unref();
+        UtilCompat.ioPool().execute(() -> {
+            Bitmap converted = Bitmap.createBitmap(pending.width, pending.height, Bitmap.Format.RGBA_8888);
+            converted.setPremultiplied(false);
+            try (pending.bitmap) {
+                PixelUtils.convertPixels(pending.bitmap.getPixmap(), converted.getPixmap(), true);
             }
             try (converted) {
                 converted.saveDialog(Bitmap.SaveFormat.PNG, 0, null);
@@ -1143,6 +1325,7 @@ public abstract class UIManager implements LifecycleOwner {
                 mLastPurgeNanos = mFrameTimeNanos;
                 context.performDeferredCleanup(120_000);
             }
+            pollPendingScreenshot();
             if (mLayerTexture != null) {
                 // we can drop the ref after submitting to the GPU
                 mLayerTexture.close();
