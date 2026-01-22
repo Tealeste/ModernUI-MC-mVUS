@@ -40,7 +40,6 @@ import net.minecraft.world.item.Item;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.CrashReportCallables;
-import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -53,7 +52,6 @@ import org.apache.commons.io.output.StringBuilderWriter;
 
 import javax.annotation.Nonnull;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.IntStream;
 
@@ -107,10 +105,6 @@ final class Registration {
         } catch (IOException e) {
             e.printStackTrace();
         }*/
-        if (ModList.get().getModContainerById(new String(new byte[]{0x1f ^ 0x74, (0x4 << 0x1) | 0x41,
-                ~-0x78, 0xd2 >> 0x1}, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT)).isPresent()) {
-            event.enqueueWork(() -> LOGGER.fatal("OK"));
-        }
         /*bytes = ArrayUtils.addAll(bytes, ModList.get().getModFileById(ModernUI.ID).getLicense()
                 .getBytes(StandardCharsets.UTF_8));
         if (bytes == null) {
