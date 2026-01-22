@@ -34,6 +34,7 @@ import icyllis.modernui.markflow.MarkflowPlugin;
 import icyllis.modernui.markflow.MarkflowTheme;
 import icyllis.modernui.mc.ModernUIMod;
 import icyllis.modernui.mc.StillAlive;
+import icyllis.modernui.mc.UtilCompat;
 import icyllis.modernui.resources.TypedValue;
 import icyllis.modernui.text.Typeface;
 import icyllis.modernui.text.method.LinkMovementMethod;
@@ -534,7 +535,7 @@ public class DashboardFragment extends Fragment {
                         connection.disconnect();
                     }
                 }
-            }).whenCompleteAsync((res, ex) -> {
+            }, UtilCompat.ioPool()).whenCompleteAsync((res, ex) -> {
                 if (ex != null) {
                     Throwable cause = ex instanceof CompletionException ? ex.getCause() : ex;
                     ModernUIMod.LOGGER.warn(CenterFragment2.MARKER,

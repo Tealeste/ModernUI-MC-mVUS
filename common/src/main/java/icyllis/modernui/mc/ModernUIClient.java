@@ -208,7 +208,7 @@ public abstract class ModernUIClient extends ModernUI {
                                         LOGGER.error(MARKER, "Failed to register font '{}'",
                                                 entry, e);
                                     }
-                                })
+                                }, UtilCompat.ioPool())
                         );
                     }
                 }
@@ -236,7 +236,7 @@ public abstract class ModernUIClient extends ModernUI {
                                         LOGGER.error(MARKER, "Failed to register font '{}'",
                                                 absP, e);
                                     }
-                                }
+                                }, UtilCompat.ioPool()
                         ));
                     }
                 }
@@ -270,7 +270,7 @@ public abstract class ModernUIClient extends ModernUI {
                                     LOGGER.error(MARKER, "Failed to register font '{}' in pack: '{}'",
                                             entry.getKey(), resource.sourcePackId(), e);
                                 }
-                            }
+                            }, UtilCompat.ioPool()
                     ));
                 }
             }

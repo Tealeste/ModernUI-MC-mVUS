@@ -26,6 +26,7 @@ import icyllis.modernui.core.Core;
 import icyllis.modernui.graphics.text.FontFamily;
 import icyllis.modernui.mc.Config;
 import icyllis.modernui.mc.ModernUIClient;
+import icyllis.modernui.mc.UtilCompat;
 import icyllis.modernui.view.Gravity;
 import icyllis.modernui.view.View;
 import icyllis.modernui.view.ViewGroup;
@@ -111,7 +112,7 @@ public class PreferredFontAccordion implements View.OnClickListener,
                         .collect(Collectors.toList());
                 values.add(0, new FontFamilyItem("\u2026", "\u2026"));
                 return values;
-            }).thenAcceptAsync(values -> {
+            }, UtilCompat.ioPool()).thenAcceptAsync(values -> {
                 mSpinner.setAdapter(mAdapter = new ArrayAdapter<>(mParent.getContext(), values));
                 mSpinner.setOnItemSelectedListener(this);
                 updateSpinnerSelection();
@@ -152,7 +153,7 @@ public class PreferredFontAccordion implements View.OnClickListener,
                         mSpinner.setSelection(0);
                     });
                 }
-            }));
+            }, UtilCompat.ioPool()));
             var params = new LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT);
             params.gravity = Gravity.CENTER_VERTICAL;
             layout.addView(openFile, params);

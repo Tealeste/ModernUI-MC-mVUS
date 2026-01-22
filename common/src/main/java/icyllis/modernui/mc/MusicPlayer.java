@@ -90,7 +90,7 @@ public class MusicPlayer {
                 ModernUIMod.LOGGER.error("Failed to open Ogg Vorbis, {}", path, e);
                 return null;
             }
-        }).whenCompleteAsync((track, ex) -> {
+        }, UtilCompat.ioPool()).whenCompleteAsync((track, ex) -> {
             mCurrentTrack = track;
             if (track != null) {
                 track.setGain(mGain);

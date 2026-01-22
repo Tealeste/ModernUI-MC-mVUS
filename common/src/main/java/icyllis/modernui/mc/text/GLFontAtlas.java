@@ -37,6 +37,7 @@ import icyllis.modernui.annotation.RenderThread;
 import icyllis.modernui.core.Core;
 import icyllis.modernui.graphics.Bitmap;
 import icyllis.modernui.mc.MuiModApi;
+import icyllis.modernui.mc.UtilCompat;
 import icyllis.modernui.mc.b3d.GlTexture_Wrapped;
 import icyllis.modernui.text.TextUtils;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
@@ -555,7 +556,7 @@ public class GLFontAtlas implements AutoCloseable {
                 } catch (IOException e) {
                     LOGGER.warn(GlyphManager.MARKER, "Failed to save font atlas", e);
                 }
-            });
+            }, UtilCompat.ioPool());
         }
     }
 
