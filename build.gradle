@@ -144,7 +144,9 @@ allprojects {
         // Mojang-hosted artifacts (e.g., LWJGL *-natives-*-patch)
         maven { url = 'https://libraries.minecraft.net/' }
         mavenCentral()
-        mavenLocal()
+        if ((rootProject.findProperty('useMavenLocal') ?: 'false').toString().toBoolean()) {
+            mavenLocal()
+        }
     }
 
     dependencies {
