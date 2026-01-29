@@ -1,27 +1,29 @@
 Changelogs
 ===
 ### Modern UI 3.12.0.5-build.4 — Version bump (2026-01-29)
-* No functional changes; version bump and documentation updates only.
-* Changelog maintenance: merge per-version entries and normalize headings (remove the appended Minecraft-target suffix from headings).
-* NOTE: The project already supports Minecraft 26.1 snapshots, but `forgeconfigapiport` does not currently support them; therefore, downloadable builds are currently only available for Minecraft 1.21.9–1.21.11 (inclusive).
+* Performance: use async PBO readback for UI screenshots; cap `GLFontAtlas` growth and evict chunks; index glyphs by chunk for atlas eviction.
+* UX/input: discard stale back-press requests; ignore ModernUI center hotkey while chatting.
+* Stability/logging: replace `printStackTrace` with Log4j logging; remove Kiwi fatal log spam; fix mixin disable checks with multiple flags.
+* Compatibility: improve ImmediatelyFast framebuffer compat; align loader metadata for known mod conflicts; add `ModListCompat` pilot and compat-layer doc.
+* Misc: use `getStyleModifier` when available for rarity; remove unfinished music visualizer stubs; gate forced GC to developer mode; add missing `ru_ru` and `uk_ua` translation keys.
+* Build/docs: gate `mavenLocal` behind `-PuseMavenLocal`; drop Minecraft `1.21.8` build target; add GitHub Actions CI build matrix; changelog maintenance (merge per-version entries and normalize headings).
 
 ### Modern UI 3.12.0.5-build.3 — Version bump (2026-01-21)
-* No functional changes; version bump and documentation updates only.
-* Build-script change: drop selectable build target `1.21.8` (no longer supported in this repo).
-* NOTE: The project already supports Minecraft 26.1 snapshots, but `forgeconfigapiport` does not currently support them; therefore, downloadable builds are currently only available for Minecraft 1.21.9–1.21.11 (inclusive).
+* Add build target Minecraft `1.21.9` (`-Pminecraft_version=1.21.9`).
+* Add build target Minecraft `26.1-snapshot-1` and make it the default build target (Fabric-only for snapshots; Forge/NeoForge profiles are not available yet).
+* Fix compat issues for Minecraft `1.21.10` client; fix crash and UI text fading issues for Minecraft `1.21.11`.
+* Build performance: enable Gradle daemon, parallel builds, and build cache by default.
+* NOTE: The project supports Minecraft 26.1 snapshots, but `forgeconfigapiport` does not currently support them; therefore, downloadable builds are currently only available for Minecraft `1.21.9`–`1.21.11` (inclusive).
 
-### Modern UI 3.12.0.5-build.2 — 26.1 Snapshot 1 upgrade (2026-01-15)
-* Add `26.1-snapshot-1` (Java Edition 26.1 Snapshot 1) as a build-selectable target and make it the default build target.
-* Keep `1.21.11` as a selectable build target (`-Pminecraft_version=1.21.11`) and continue building Fabric/Forge/NeoForge for 1.21.11.
-* Adapt build scripts for Minecraft 26.1+ unobfuscated jars (Fabric-only for snapshots; Forge/NeoForge profiles are not available yet).
-* Require JDK 25 for snapshot builds (Loom enforces running Gradle on Java 25).
-* No functional changes for Minecraft 1.21.11 builds; version bump and documentation updates only.
+### Modern UI 3.12.0.5-build.2 — Version bump (2026-01-13)
+* Build-script change: introduce per-Minecraft-version `modVersionBase` mapping to keep release versioning consistent across build targets.
+* No functional changes; version bump and documentation updates only.
 
 ### Modern UI 3.12.0.5-build.1 — 1.21.11 compatibility update (2026-01-03)
 * Update default build target to Minecraft 1.21.11 and validate 1.21.8–1.21.11 across Fabric/Forge/NeoForge
 * Expand loader metadata version ranges to cover `<1.21.12` and update minimum loader requirements
-* Add `-Pminecraft_version=...` Gradle profiles for 1.21.8/1.21.9/1.21.10/1.21.11 and compat shims for patch-level API drift
-* Update Forge/NeoForge `pack.mcmeta` schemas for 1.21.8 vs 1.21.9+ pack-format changes
+* Add `-Pminecraft_version=...` Gradle profiles and compat shims for patch-level API drift
+* Update Forge/NeoForge `pack.mcmeta` schemas for patch-level pack-format changes
 
 #### Changes from (3.12.0.4, 3.12.0.3, 3.12.0.2, 3.12.0.1)
 * 3.11.1.11 → 3.12.0.5-build.1 for Minecraft 1.21.6-1.21.11
