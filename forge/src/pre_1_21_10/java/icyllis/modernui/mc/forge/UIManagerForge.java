@@ -27,6 +27,7 @@ import icyllis.modernui.mc.*;
 import icyllis.modernui.mc.ui.CenterFragment2;
 import icyllis.modernui.text.TextUtils;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.renderer.texture.*;
@@ -140,9 +141,10 @@ public final class UIManagerForge extends UIManager implements LifecycleOwner {
     @Override
     protected void onPreKeyInput(int keyCode, int scanCode, int action, int mods) {
         if (action == GLFW_PRESS) {
-            if (minecraft.screen == null ||
+            // Do not trigger global hotkeys while the user is typing in chat/command input.
+            if (!(minecraft.screen instanceof ChatScreen) && (minecraft.screen == null ||
                     minecraft.screen.shouldCloseOnEsc() ||
-                    minecraft.screen instanceof TitleScreen) {
+                    minecraft.screen instanceof TitleScreen)) {
                 InputConstants.Key key = InputConstants.getKey(keyCode, scanCode);
                 if (OPEN_CENTER_KEY.isActiveAndMatches(key)) {
                     open(new CenterFragment2());

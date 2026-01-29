@@ -28,6 +28,7 @@ import icyllis.modernui.mc.ui.CenterFragment2;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import org.jetbrains.annotations.ApiStatus;
@@ -102,9 +103,11 @@ public final class UIManagerFabric extends UIManager {
     @Override
     protected void onPreKeyInput(int keyCode, int scanCode, int action, int mods) {
         if (action == GLFW_PRESS) {
-            if (minecraft.screen == null ||
+            // Do not trigger global hotkeys while the user is typing in chat/command input.
+            // This avoids surprising behavior like opening the Modern UI center menu when entering "/kill".
+            if (!(minecraft.screen instanceof ChatScreen) && (minecraft.screen == null ||
                     minecraft.screen.shouldCloseOnEsc() ||
-                    minecraft.screen instanceof TitleScreen) {
+                    minecraft.screen instanceof TitleScreen)) {
                 if ((mods & GLFW_MOD_CONTROL) != 0 && OPEN_CENTER_KEY.matches(new KeyEvent(keyCode, scanCode, mods))) {
                     open(new CenterFragment2());
                     return;

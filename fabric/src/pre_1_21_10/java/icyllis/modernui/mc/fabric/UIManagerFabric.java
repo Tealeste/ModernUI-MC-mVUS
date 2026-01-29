@@ -27,6 +27,7 @@ import icyllis.modernui.mc.*;
 import icyllis.modernui.mc.ui.CenterFragment2;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import org.jetbrains.annotations.ApiStatus;
@@ -98,9 +99,10 @@ public final class UIManagerFabric extends UIManager {
     @Override
     protected void onPreKeyInput(int keyCode, int scanCode, int action, int mods) {
         if (action == GLFW_PRESS) {
-            if (minecraft.screen == null ||
+            // Do not trigger global hotkeys while the user is typing in chat/command input.
+            if (!(minecraft.screen instanceof ChatScreen) && (minecraft.screen == null ||
                     minecraft.screen.shouldCloseOnEsc() ||
-                    minecraft.screen instanceof TitleScreen) {
+                    minecraft.screen instanceof TitleScreen)) {
                 if (Screen.hasControlDown() && OPEN_CENTER_KEY.matches(keyCode, scanCode)) {
                     open(new CenterFragment2());
                     return;
