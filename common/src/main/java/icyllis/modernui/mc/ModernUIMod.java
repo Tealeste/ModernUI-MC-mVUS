@@ -41,6 +41,7 @@ public abstract class ModernUIMod {
 
     protected static boolean sOptiFineLoaded;
     protected static boolean sIrisApiLoaded;
+    protected static boolean sImmediatelyFastLoaded;
     protected static volatile boolean sLegendaryTooltipsLoaded;
     protected static volatile boolean sUntranslatedItemsLoaded;
 
@@ -64,6 +65,12 @@ public abstract class ModernUIMod {
             LOGGER.info(MARKER, "Iris API installed...");
         } catch (Exception ignored) {
         }
+        try {
+            Class.forName("net.raphimc.immediatelyfast.ImmediatelyFast");
+            sImmediatelyFastLoaded = true;
+            LOGGER.info(MARKER, "ImmediatelyFast installed...");
+        } catch (Exception ignored) {
+        }
     }
 
     @Nonnull
@@ -82,6 +89,10 @@ public abstract class ModernUIMod {
 
     public static boolean isIrisApiLoaded() {
         return sIrisApiLoaded;
+    }
+
+    public static boolean isImmediatelyFastLoaded() {
+        return sImmediatelyFastLoaded;
     }
 
     public static boolean isLegendaryTooltipsLoaded() {

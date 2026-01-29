@@ -156,6 +156,7 @@ public abstract class UIManager implements LifecycleOwner {
     protected boolean mNoRender = false;
     protected boolean mClearNextMainTarget = false;
     protected boolean mAlwaysClearMainTarget = false;
+    private boolean mLoggedImmediatelyFastFramebufferRestore = false;
     private long mLastPurgeNanos;
 
     private GlTexture_Wrapped mLayerTexture;
@@ -1084,6 +1085,19 @@ public abstract class UIManager implements LifecycleOwner {
 
 
 
+        final boolean immediatelyFastCompat = ModernUIMod.isImmediatelyFastLoaded();
+        final int prevDrawFramebuffer;
+        final int prevReadFramebuffer;
+        if (immediatelyFastCompat) {
+            // ImmediatelyFast can suppress internal framebuffer unbinds (to reduce state churn).
+            // Arc3D may bind FBOs directly, so restore bindings to avoid leaking into subsequent draws.
+            prevDrawFramebuffer = GL33C.glGetInteger(GL33C.GL_DRAW_FRAMEBUFFER_BINDING);
+            prevReadFramebuffer = GL33C.glGetInteger(GL33C.GL_READ_FRAMEBUFFER_BINDING);
+        } else {
+            prevDrawFramebuffer = 0;
+            prevReadFramebuffer = 0;
+        }
+
         @RawPtr
         ImmediateContext context = Core.requireImmediateContext();
 
@@ -1196,6 +1210,23 @@ public abstract class UIManager implements LifecycleOwner {
             for (var handler : mRoot.mRawDrawHandlers) {
                 handler.render(gr, mouseX, mouseY, deltaTick, mWindow);
             }
+        }
+
+        if (immediatelyFastCompat) {
+            // Restore framebuffer bindings unconditionally. Avoid relying on internal RenderSystem/Blaze3D
+            // unbind behavior that optimization mods may skip.
+            if (ModernUIMod.isDeveloperMode() && !mLoggedImmediatelyFastFramebufferRestore) {
+                mLoggedImmediatelyFastFramebufferRestore = true;
+                int curDrawFramebuffer = GL33C.glGetInteger(GL33C.GL_DRAW_FRAMEBUFFER_BINDING);
+                int curReadFramebuffer = GL33C.glGetInteger(GL33C.GL_READ_FRAMEBUFFER_BINDING);
+                if (curDrawFramebuffer != prevDrawFramebuffer || curReadFramebuffer != prevReadFramebuffer) {
+                    LOGGER.info(MARKER,
+                            "ImmediatelyFast compat: restored framebuffer bindings after UI render (draw {}->{} read {}->{}).",
+                            curDrawFramebuffer, prevDrawFramebuffer, curReadFramebuffer, prevReadFramebuffer);
+                }
+            }
+            GL33C.glBindFramebuffer(GL33C.GL_DRAW_FRAMEBUFFER, prevDrawFramebuffer);
+            GL33C.glBindFramebuffer(GL33C.GL_READ_FRAMEBUFFER, prevReadFramebuffer);
         }
 
         context.getDevice().markContextDirty(

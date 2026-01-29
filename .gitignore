@@ -30,6 +30,9 @@ classes
 logs
 .DS_Store
 
+# local scratch
+.tmp/
+
 # AI tooling / agent artifacts
 .codex/
 .claude/
