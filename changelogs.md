@@ -1,36 +1,29 @@
 Changelogs
 ===
-### Modern UI 3.12.0.5-build.4 (Minecraft 26.1-snapshot-1) — Version bump (2026-01-29)
+### Modern UI 3.12.0.5-build.4 — Version bump (2026-01-29)
 * No functional changes; version bump and documentation updates only.
+* Changelog maintenance: merge per-version entries and normalize headings (remove the appended Minecraft-target suffix from headings).
 * NOTE: The project already supports Minecraft 26.1 snapshots, but `forgeconfigapiport` does not currently support them; therefore, downloadable builds are currently only available for Minecraft 1.21.9–1.21.11 (inclusive).
 
-### Modern UI 3.12.0.5-build.4 (Minecraft 1.21.11) — Version bump (2026-01-29)
+### Modern UI 3.12.0.5-build.3 — Version bump (2026-01-21)
 * No functional changes; version bump and documentation updates only.
-
-### Modern UI 3.12.0.5-build.3 (Minecraft 26.1-snapshot-1) — Version bump (2026-01-21)
 * Build-script change: drop selectable build target `1.21.8` (no longer supported in this repo).
 * NOTE: The project already supports Minecraft 26.1 snapshots, but `forgeconfigapiport` does not currently support them; therefore, downloadable builds are currently only available for Minecraft 1.21.9–1.21.11 (inclusive).
 
-### Modern UI 3.12.0.5-build.3 (Minecraft 1.21.11) — Version bump (2026-01-21)
-* No functional changes; version bump and documentation updates only.
-
-### Modern UI 3.12.0.5-build.2 (Minecraft 26.1-snapshot-1) — 26.1 Snapshot 1 upgrade (2026-01-15)
+### Modern UI 3.12.0.5-build.2 — 26.1 Snapshot 1 upgrade (2026-01-15)
 * Add `26.1-snapshot-1` (Java Edition 26.1 Snapshot 1) as a build-selectable target and make it the default build target.
 * Keep `1.21.11` as a selectable build target (`-Pminecraft_version=1.21.11`) and continue building Fabric/Forge/NeoForge for 1.21.11.
 * Adapt build scripts for Minecraft 26.1+ unobfuscated jars (Fabric-only for snapshots; Forge/NeoForge profiles are not available yet).
 * Require JDK 25 for snapshot builds (Loom enforces running Gradle on Java 25).
+* No functional changes for Minecraft 1.21.11 builds; version bump and documentation updates only.
 
-### Modern UI 3.12.0.5-build.2 (Minecraft 1.21.11) — Version bump (2026-01-12)
-* No functional changes; version bump and documentation updates only.
-
-### Modern UI 3.12.0.5-build.1 (Minecraft 1.21.11) — 1.21.11 compatibility update (2026-01-03)
+### Modern UI 3.12.0.5-build.1 — 1.21.11 compatibility update (2026-01-03)
 * Update default build target to Minecraft 1.21.11 and validate 1.21.8–1.21.11 across Fabric/Forge/NeoForge
 * Expand loader metadata version ranges to cover `<1.21.12` and update minimum loader requirements
 * Add `-Pminecraft_version=...` Gradle profiles for 1.21.8/1.21.9/1.21.10/1.21.11 and compat shims for patch-level API drift
 * Update Forge/NeoForge `pack.mcmeta` schemas for 1.21.8 vs 1.21.9+ pack-format changes
 
-### Modern UI 3.12.0.5-build.1 (Minecraft 1.21.11) (3.12.0.4, 3.12.0.3, 3.12.0.2, 3.12.0.1)
-Changes from
+#### Changes from (3.12.0.4, 3.12.0.3, 3.12.0.2, 3.12.0.1)
 * 3.11.1.11 → 3.12.0.5-build.1 for Minecraft 1.21.6-1.21.11
 * 3.11.1.11 → 3.12.0.3 for Minecraft 1.21.4
 * 3.11.1.9 → 3.12.0.2 for Minecraft 1.21-1.21.1
