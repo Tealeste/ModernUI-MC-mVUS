@@ -1,5 +1,12 @@
 Changelogs
 ===
+### Modern UI 3.12.0.5-build.4 (Minecraft 26.1-snapshot-1) — Version bump (2026-01-29)
+* No functional changes; version bump and documentation updates only.
+* NOTE: The project already supports Minecraft 26.1 snapshots, but `forgeconfigapiport` does not currently support them; therefore, downloadable builds are currently only available for Minecraft 1.21.9–1.21.11 (inclusive).
+
+### Modern UI 3.12.0.5-build.4 (Minecraft 1.21.11) — Version bump (2026-01-29)
+* No functional changes; version bump and documentation updates only.
+
 ### Modern UI 3.12.0.5-build.3 (Minecraft 26.1-snapshot-1) — Version bump (2026-01-21)
 * Build-script change: drop selectable build target `1.21.8` (no longer supported in this repo).
 * NOTE: The project already supports Minecraft 26.1 snapshots, but `forgeconfigapiport` does not currently support them; therefore, downloadable builds are currently only available for Minecraft 1.21.9–1.21.11 (inclusive).
