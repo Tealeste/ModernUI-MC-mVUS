@@ -211,6 +211,14 @@ dependencies {
 构建 ModernUI-MC 时，通用 jar 不仅包含 ModernUI-MC 本体，也会将 ModernUI 框架及其扩展（不含 Kotlin 扩展）进行 shadow，
 并打包额外资源/运行时依赖（视构建配置而定）。
 
+## 测试
+- 单元测试位于 `common/src/test/java/`。
+- 运行单元测试（旧版本配置，例如 `1.21.11`）：
+  - `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew :common:test -Pminecraft_version=1.21.11`
+- 运行完整构建（包含测试，旧版本配置）：
+  - `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew build -Pminecraft_version=1.21.11`
+- 说明：快照目标（例如 `26.1-snapshot-1`）会禁用 `:common` 的独立编译；目前单元测试仅在旧版本配置下运行。
+
 ## 更新日志
 更新日志位于 [changelogs.md](changelogs.md)。
 

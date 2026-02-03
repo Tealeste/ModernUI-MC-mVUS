@@ -216,6 +216,15 @@ development, clone `ModernUI` next to this repository and keep both up to date.
 When you build ModernUI-MC, the universal jar will contain not only ModernUI-MC itself, but also shadow the ModernUI
 framework and extensions (except Kotlin extensions), plus additional assets/runtime as needed.
 
+## Testing
+- Unit tests live under `common/src/test/java/`.
+- Run unit tests (legacy profiles, e.g. `1.21.11`):
+  - `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew :common:test -Pminecraft_version=1.21.11`
+- Run a full build (includes tests) for a legacy profile:
+  - `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew build -Pminecraft_version=1.21.11`
+- Note: Snapshot targets (e.g. `26.1-snapshot-1`) disable standalone compilation of `:common`; unit tests currently
+  run only on legacy profiles.
+
 ## Changelog
 Release notes live in [changelogs.md](changelogs.md).
 

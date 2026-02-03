@@ -155,6 +155,10 @@ allprojects {
         testCompileOnly 'com.google.code.findbugs:jsr305:3.0.2'
         testCompileOnly 'org.jetbrains:annotations:23.1.0'
 
+        testImplementation platform("org.junit:junit-bom:${junit_version}")
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
         def lwjglNatives
         switch (org.gradle.internal.os.OperatingSystem.current()) {
             case org.gradle.internal.os.OperatingSystem.WINDOWS:
@@ -201,6 +205,10 @@ allprojects {
     tasks.withType(JavaCompile).configureEach {
         it.options.encoding = "UTF-8"
         it.options.release.set(rootProject.modernUiJavaRelease as int)
+    }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
     }
 
     java {

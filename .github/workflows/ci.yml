@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -20,7 +24,7 @@ jobs:
           - name: "Java 21 • 1.21.11 • Fabric/Forge/NeoForge"
             java: "21"
             minecraft_version: "1.21.11"
-            gradle_tasks: "build -x test"
+            gradle_tasks: "build"
 
     steps:
       - name: Checkout
@@ -40,3 +44,14 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon --stacktrace ${{ matrix.gradle_tasks }} -Pminecraft_version=${{ matrix.minecraft_version }}
 
+      - name: Upload test reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.java }}-${{ matrix.minecraft_version }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            **/build/reports/tests/test
+            **/build/test-results/test
+            build/reports/problems
