@@ -9,6 +9,7 @@
     "AccessBufferSource",
     "AccessFontManager",
     "AccessGuiRendererDraw",
+    "MixinActiveTextCollector",
     "MixinBidiReorder",
     "MixinClientLanguage",
     "MixinContextualBar",
